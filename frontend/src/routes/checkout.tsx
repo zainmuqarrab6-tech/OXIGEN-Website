@@ -85,7 +85,7 @@ function CheckoutPage() {
               </Link>
               {user && (
                 <Link
-                  to="/account"
+                  to="/dashboard/orders"
                   className="rounded-xl glass px-6 py-3 text-sm font-semibold text-ink"
                 >
                   View Orders

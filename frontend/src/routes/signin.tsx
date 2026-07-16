@@ -32,13 +32,13 @@ function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (user) navigate({ to: "/account" });
+    if (user) navigate({ to: "/dashboard" });
   }, [user, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const success = await signIn(email, password);
-    if (success) navigate({ to: "/account" });
+    if (success) navigate({ to: "/dashboard" });
   };
 
   return (

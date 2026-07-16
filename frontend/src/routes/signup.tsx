@@ -27,7 +27,7 @@ function SignUpPage() {
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    if (user) navigate({ to: "/account" });
+    if (user) navigate({ to: "/dashboard" });
   }, [user, navigate]);
 
   const submit = async (e: React.FormEvent) => {

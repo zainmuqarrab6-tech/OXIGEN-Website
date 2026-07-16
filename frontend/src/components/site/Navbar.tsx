@@ -72,7 +72,7 @@ export function Navbar() {
           </Link>
 
           <Link
-            to={user ? "/account" : "/signin"}
+            to={user ? "/dashboard" : "/signin"}
             aria-label={user ? "Account" : "Sign in"}
             className="grid h-10 w-10 place-items-center rounded-xl glass text-ink transition-colors hover:text-primary"
           >
