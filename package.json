@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:backend": "playwright test tests/backend-api.spec.ts",
+    "test:ui": "playwright test tests/comprehensive-audit.spec.ts"
+  }
+}
