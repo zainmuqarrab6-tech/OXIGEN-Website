@@ -172,20 +172,24 @@ function DashboardHome() {
               </Link>
             }
           />
-          <ul className="space-y-3">
-            {notifs.map((n) => (
-              <li key={n.id} className="flex gap-3 rounded-xl bg-white/60 p-3">
-                <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${n.read ? "bg-secondary text-muted-foreground" : "bg-gradient-to-br from-primary to-accent text-white"}`}>
-                  <Bell className="h-4 w-4" />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">{n.title}</p>
-                  <p className="line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
-                  <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{n.time}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {notifs.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No new notifications.</p>
+          ) : (
+            <ul className="space-y-3">
+              {notifs.map((n) => (
+                <li key={n.id} className="flex gap-3 rounded-xl bg-white/60 p-3">
+                  <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${n.read ? "bg-secondary text-muted-foreground" : "bg-gradient-to-br from-primary to-accent text-white"}`}>
+                    <Bell className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{n.title}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
+                    <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{n.time}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </DashCard>
       </div>
 

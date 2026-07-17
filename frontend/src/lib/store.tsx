@@ -208,7 +208,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           email: p.email || email,
           phone: p.mobile_no || p.phone || "",
           gender: p.gender || "Female",
-          dob: p.dob || "1996-04-12",
+          dob: p.birth_date || p.dob || "1996-04-12",
           status: "Premium Member",
           memberSince: "March 2024",
         });
@@ -348,14 +348,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const payload: Record<string, any> = {
         email: user.email,
       };
-      if (patch.name) {
+      if (patch.name !== undefined) {
         payload.full_name = patch.name;
         payload.first_name = first_name;
         payload.last_name = last_name;
       }
-      if (patch.phone) {
+      if (patch.phone !== undefined) {
         payload.phone = patch.phone;
         payload.mobile_no = patch.phone;
+      }
+      if (patch.gender !== undefined) {
+        payload.gender = patch.gender;
+      }
+      if (patch.dob !== undefined) {
+        payload.birth_date = patch.dob;
       }
 
       const res = await fetch(`${API_BASE}/user/profile`, {

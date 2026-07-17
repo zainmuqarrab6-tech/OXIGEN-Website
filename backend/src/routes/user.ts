@@ -14,7 +14,7 @@ const changePasswordLimiter = createRateLimiter("changePassword");
 // Profile
 // ---------------------------------------------------------------------------
 
-const USER_FIELDS = ["name","email","full_name","first_name","last_name","mobile_no","phone","username"];
+const USER_FIELDS = ["name","email","full_name","first_name","last_name","mobile_no","phone","username","gender","birth_date"];
 
 router.get("/user/profile", requireAuth, async (req, res) => {
   const email = req.query["email"] as string | undefined;
@@ -44,8 +44,13 @@ router.put("/user/profile", requireAuth, async (req, res) => {
   if (!email) { res.status(400).json({ error: "email is required in request body." }); return; }
   if (!assertOwner(req, res, email)) return;
 
-  const allowedFields = ["full_name","first_name","last_name","mobile_no","phone"];
+  const allowedFields = ["full_name","first_name","last_name","mobile_no","phone","gender","birth_date"];
   const safePatch = Object.fromEntries(Object.entries(patch).filter(([key]) => allowedFields.includes(key)));
+
+  if (typeof safePatch.gender === "string" && safePatch.gender) {
+    const g = safePatch.gender.trim().toLowerCase();
+    safePatch.gender = g.charAt(0).toUpperCase() + g.slice(1);
+  }
 
   try {
     const erpRes = await erpFetch(getErpUrl(`/api/resource/User/${encodeURIComponent(email)}`), {

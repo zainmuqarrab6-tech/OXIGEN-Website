@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Search,
+  ShoppingBag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import oxigenLogo from "@/assets/oxigen-logo.png";
@@ -171,9 +172,17 @@ function SidebarBody({
         })}
       </nav>
 
+      <Link
+        to="/shop"
+        className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary/10"
+      >
+        <ShoppingBag className="h-4.5 w-4.5" />
+        Back to Shop
+      </Link>
+
       <button
         onClick={onSignOut}
-        className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-ink/80 transition-colors hover:bg-destructive/10 hover:text-destructive"
+        className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-ink/80 transition-colors hover:bg-destructive/10 hover:text-destructive"
       >
         <LogOut className="h-4.5 w-4.5" />
         Logout

@@ -202,7 +202,7 @@ function OrderDetailsPage() {
           <DashCard>
             <SectionHeader title="Items" />
             <ul className="divide-y divide-border/60">
-              {order.items.map((it) => (
+              {order.items.map((it: any) => (
                 <li key={it.slug} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
                   <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary">
                     <img src={it.img} alt={it.name} className="h-full w-full object-contain p-1.5" />

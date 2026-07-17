@@ -66,7 +66,7 @@ function CheckoutPage() {
             </span>
             <h1 className="mt-6 font-display text-3xl font-extrabold text-ink">Order Confirmed!</h1>
             <p className="mt-3 text-muted-foreground">
-              Thank you, {placed.customer.name}. Your order{" "}
+              Thank you, {placed.customer?.name || "Customer"}. Your order{" "}
               <span className="font-semibold text-ink">{placed.id}</span> has been placed. We'll
               deliver it to your doorstep in 2–4 business days.
             </p>

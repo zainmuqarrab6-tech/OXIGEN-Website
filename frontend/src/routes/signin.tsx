@@ -6,8 +6,8 @@ import { Reveal } from "@/components/site/Reveal";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/signin")({
-  validateSearch: (search: Record<string, string | undefined>) => ({
-    registered: search.registered as string | undefined,
+  validateSearch: (search: Record<string, string | undefined>): { registered?: string } => ({
+    registered: search.registered,
   }),
   head: () => ({
     meta: [

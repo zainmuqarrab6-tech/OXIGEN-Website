@@ -99,6 +99,16 @@ function SecurityPage() {
       <DashCard className="lg:col-span-2">
         <SectionHeader title="Active Devices" />
         <ul className="divide-y divide-border/60">
+          <li className="flex flex-wrap items-center gap-4 py-3 first:pt-0 last:pb-0">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-secondary text-ink">
+              <Monitor className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-ink">Current Session</p>
+              <p className="text-xs text-muted-foreground">Active now</p>
+            </div>
+            <StatusBadge status="This device" tone="success" />
+          </li>
           {mockDevices.map((d) => {
             const Icon = d.device.toLowerCase().includes("iphone") || d.device.toLowerCase().includes("android") ? Smartphone : Monitor;
             return (
@@ -125,30 +135,34 @@ function SecurityPage() {
 
       <DashCard className="lg:col-span-2">
         <SectionHeader title="Login History" />
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="pb-3">When</th>
-                <th className="pb-3">Device</th>
-                <th className="pb-3">IP</th>
-                <th className="pb-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {mockLoginHistory.map((l) => (
-                <tr key={l.id}>
-                  <td className="py-3 text-ink">{l.when}</td>
-                  <td className="py-3 text-muted-foreground">{l.device}</td>
-                  <td className="py-3 text-muted-foreground">{l.ip}</td>
-                  <td className="py-3">
-                    <StatusBadge status={l.status} tone={l.status === "Success" ? "success" : "danger"} />
-                  </td>
+        {mockLoginHistory.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">No other login history available.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="pb-3">When</th>
+                  <th className="pb-3">Device</th>
+                  <th className="pb-3">IP</th>
+                  <th className="pb-3">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {mockLoginHistory.map((l) => (
+                  <tr key={l.id}>
+                    <td className="py-3 text-ink">{l.when}</td>
+                    <td className="py-3 text-muted-foreground">{l.device}</td>
+                    <td className="py-3 text-muted-foreground">{l.ip}</td>
+                    <td className="py-3">
+                      <StatusBadge status={l.status} tone={l.status === "Success" ? "success" : "danger"} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </DashCard>
     </div>
   );

@@ -218,7 +218,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   const { usr, pwd } = req.body as { usr?: string; pwd?: string };
 
   if (!usr || !pwd) {
-    res.status(400).json({ error: "Email and password are required." });
+    res.status(400).json({ success: false, error: "Email and password are required." });
     return;
   }
 
@@ -232,17 +232,24 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     const data = await erpRes.json() as { message?: string; full_name?: string };
 
     if (!erpRes.ok) {
-      res.status(401).json({ error: "Invalid email or password." });
+      res.status(401).json({ success: false, error: "Invalid email or password." });
       return;
     }
 
     const setCookie = erpRes.headers.get("set-cookie");
     if (setCookie) res.setHeader("Set-Cookie", setCookie);
 
-    res.json({ message: data.message, full_name: data.full_name });
+    res.json({
+      success: true,
+      message: data.message,
+      user: {
+        email: usr,
+        name: data.full_name || usr,
+      },
+    });
   } catch (err) {
     logger.error({ err: err }, "[auth/login]");
-    res.status(500).json({ error: "Internal server error." });
+    res.status(500).json({ success: false, error: "Internal server error." });
   }
 });
 
@@ -287,7 +294,7 @@ router.get("/auth/me", async (req, res) => {
     const email = data.message;
 
     if (!email || email === "Guest") {
-      res.json({ user: null });
+      res.json({ success: false, user: null });
       return;
     }
 
@@ -310,10 +317,16 @@ router.get("/auth/me", async (req, res) => {
       // fullName is optional — if it fails, just return the email
     }
 
-    res.json({ user: { email, fullName } });
+    res.json({
+      success: true,
+      user: {
+        email,
+        name: fullName || email,
+      },
+    });
   } catch (err) {
     logger.error({ err: err }, "[auth/me]");
-    res.json({ user: null });
+    res.json({ success: false, user: null });
   }
 });
 

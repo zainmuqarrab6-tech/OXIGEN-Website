@@ -82,7 +82,23 @@ function ProfilePage() {
           <Field label="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} disabled={!editing} />
           <Field label="Email" type="email" value={form.email} disabled />
           <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} disabled={!editing} />
-          <Field label="Gender" value={form.gender} onChange={(v) => setForm({ ...form, gender: v })} disabled={!editing} />
+          {editing ? (
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-muted-foreground">Gender</span>
+              <select
+                value={form.gender ? (form.gender.charAt(0).toUpperCase() + form.gender.slice(1).toLowerCase()) : ""}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                className="h-11 w-full rounded-xl bg-white/70 px-3 text-sm text-ink outline-none ring-1 ring-inset ring-border transition focus:ring-primary"
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+          ) : (
+            <Field label="Gender" value={form.gender} disabled />
+          )}
           <Field label="Date of Birth" type="date" value={form.dob} onChange={(v) => setForm({ ...form, dob: v })} disabled={!editing} />
 
           <div className="sm:col-span-2 flex flex-wrap gap-2 border-t border-border/70 pt-4">
@@ -115,7 +131,7 @@ function Field({
 }: {
   label: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange?: (v: string) => void;
   type?: string;
   disabled?: boolean;
 }) {
@@ -125,7 +141,7 @@ function Field({
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         className="h-11 w-full rounded-xl bg-white/70 px-3 text-sm text-ink outline-none ring-1 ring-inset ring-border transition focus:ring-primary disabled:bg-secondary/60 disabled:text-ink/70"
       />
