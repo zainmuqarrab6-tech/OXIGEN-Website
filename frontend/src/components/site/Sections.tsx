@@ -129,7 +129,29 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
 }
 
 export function Products() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { addToCart, toggleWishlist, inWishlist } = useStore();
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/items?limit=3`)
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((json) => {
+        setData(json.data || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  const displayProducts = error ? products : data;
+
   return (
     <section id="products" className="relative overflow-hidden py-24">
       <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-96 w-[40rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
@@ -142,76 +164,94 @@ export function Products() {
           />
         </Reveal>
         <div className="mt-14 grid gap-7 md:grid-cols-3">
-          {products.map((p, i) => {
-            const slug = slugify(p.name);
-            const available = p.price !== "Coming Soon";
-            const saved = inWishlist(slug);
-            return (
-              <Reveal key={p.name} delay={i * 0.1}>
-                <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl glass p-6 transition-all duration-500 hover:-translate-y-2">
-                  <span className="absolute left-6 top-6 z-10 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-semibold text-white shadow">
-                    {p.tag}
-                  </span>
-                  <button
-                    aria-label="Toggle wishlist"
-                    onClick={() => toggleWishlist(slug)}
-                    className={`absolute right-6 top-6 z-10 grid h-9 w-9 place-items-center rounded-full glass transition-colors ${saved ? "text-primary" : "text-ink hover:text-primary"}`}
-                  >
-                    <Heart className={`h-4 w-4 ${saved ? "fill-primary" : ""}`} />
-                  </button>
-                  <Link
-                    to="/product/$slug"
-                    params={{ slug }}
-                    className="relative mb-6 aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-white to-secondary"
-                  >
-                    <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 bg-gradient-to-t from-primary/10 to-transparent" />
-                    <img
-                      src={p.img}
-                      alt={`${p.name} — ${p.subtitle}`}
-                      loading="lazy"
-                      className="h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
-                    />
-                  </Link>
-                  <Link
-                    to="/product/$slug"
-                    params={{ slug }}
-                    className="font-display text-lg font-bold text-ink hover:text-primary"
-                  >
-                    {p.name}
-                  </Link>
-                  <p className="mt-1 text-sm font-medium text-primary">{p.subtitle}</p>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
-                    {p.desc}
-                  </p>
-                  <div className="mt-5 flex items-center justify-between">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xl font-extrabold text-ink">
-                        {available ? formatPKR(parsePrice(p.price)) : p.price}
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-96 w-full animate-pulse rounded-3xl bg-secondary glass p-6" />
+              ))
+            : displayProducts.map((p, i) => {
+                const isApi = Boolean(p.item_code);
+                const slug = isApi
+                  ? p.route?.split("/").pop() || slugify(p.item_name)
+                  : slugify(p.name);
+                const name = p.item_name || p.name;
+                const badge = p.item_group || p.subtitle || "";
+                const desc = p.short_description || p.desc || "";
+                const price = isApi ? p.standard_rate || 0 : parsePrice(p.price);
+                const was = isApi ? null : p.was;
+                const tag = isApi ? null : p.tag;
+                const available = isApi ? p.custom_stock_qty !== 0 : p.price !== "Coming Soon";
+                const img = p.image
+                  ? p.image.startsWith("http")
+                    ? p.image
+                    : `${import.meta.env.VITE_API_URL}/items/image${p.image}`
+                  : p.img;
+                const saved = inWishlist(slug);
+
+                return (
+                  <Reveal key={p.item_code || p.name} delay={i * 0.1}>
+                    <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl glass p-6 transition-all duration-500 hover:-translate-y-2">
+                      <span className="absolute left-6 top-6 z-10 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-semibold text-white shadow">
+                        {badge}
                       </span>
-                      {p.was && (
-                        <span className="text-sm text-muted-foreground line-through">{p.was}</span>
-                      )}
+                      <button
+                        aria-label="Toggle wishlist"
+                        onClick={() => toggleWishlist(slug)}
+                        className={`absolute right-6 top-6 z-10 grid h-9 w-9 place-items-center rounded-full glass transition-colors ${saved ? "text-primary" : "text-ink hover:text-primary"}`}
+                      >
+                        <Heart className={`h-4 w-4 ${saved ? "fill-primary" : ""}`} />
+                      </button>
+                      <Link
+                        to="/product/$slug"
+                        params={{ slug }}
+                        className="relative mb-6 aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-br from-secondary via-white to-secondary"
+                      >
+                        <img
+                          src={img}
+                          alt={`${name} — ${badge}`}
+                          loading="lazy"
+                          className="h-full w-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
+                        />
+                      </Link>
+                      <Link
+                        to="/product/$slug"
+                        params={{ slug }}
+                        className="font-display text-lg font-bold text-ink hover:text-primary"
+                      >
+                        {name}
+                      </Link>
+                      <p className="mt-1 text-sm font-medium text-primary">{badge}</p>
+                      <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                        {desc}
+                      </p>
+                      <div className="mt-5 flex items-center justify-between">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl font-extrabold text-ink">
+                            {available ? formatPKR(price) : "Coming Soon"}
+                          </span>
+                          {was && (
+                            <span className="text-sm text-muted-foreground line-through">{was}</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => addToCart(slug)}
+                          disabled={!available}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-transform duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {available ? (
+                            <>
+                              Add <ShoppingCart className="h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              Soon <ArrowUpRight className="h-4 w-4" />
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => addToCart(slug)}
-                      disabled={!available}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-transform duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {available ? (
-                        <>
-                          Add <ShoppingCart className="h-4 w-4" />
-                        </>
-                      ) : (
-                        <>
-                          Soon <ArrowUpRight className="h-4 w-4" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </Reveal>
-            );
-          })}
+                  </Reveal>
+                );
+              })}
         </div>
       </div>
     </section>
