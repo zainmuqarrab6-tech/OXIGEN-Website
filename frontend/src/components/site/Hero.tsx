@@ -110,8 +110,8 @@ export function Hero() {
               <div className="absolute inset-0 -z-10 scale-90 rounded-[2.5rem] bg-gradient-to-br from-primary/40 to-accent/40 blur-3xl" />
               <div className="animate-float rounded-[2.5rem] glass p-6">
                 <img
-                  src={products[0].img}
-                  alt="OxiGen OxiGlo L-Glutathione 750mg premium supplement bottle"
+                  src={products[2].img}
+                  alt="OxiGen OxiDop Focus & Dopamine Support supplement bottle"
                   loading="eager"
                   className="mx-auto h-[26rem] w-auto object-contain drop-shadow-2xl"
                 />
@@ -122,8 +122,8 @@ export function Hero() {
               style={{ x: px, y: py, translateZ: 60 }}
               className="absolute -left-6 top-10 rounded-2xl glass px-4 py-3 text-sm"
             >
-              <p className="font-bold text-ink">OxiGlo 750mg</p>
-              <p className="text-xs text-muted-foreground">Glow • Detox • Immunity</p>
+              <p className="font-bold text-ink">OxiDop</p>
+              <p className="text-xs text-muted-foreground">Focus • Calm • Motivation</p>
             </motion.div>
             <motion.div
               style={{ x: px, y: py, translateZ: 80 }}
