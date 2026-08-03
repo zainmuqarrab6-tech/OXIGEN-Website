@@ -18,6 +18,7 @@ import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 import { getErpUrl, getErpHeaders, parseErpError, pingErpNext, erpFetch, findCustomerByEmail, ensureAddressLinkedToCustomer } from "./erpnext-client.js";
 import { sendMail, buildOrderConfirmationEmail } from "./mailer.js";
+import { createCustomerForEmail } from "./erpnext-client.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -440,9 +441,21 @@ async function createErpOrder(payload: OrderJobPayload): Promise<string> {
   } = payload;
 
   // ── Step 1: Find Customer (shared utility) ─────────────────────────────────
-  const customerName = await findCustomerByEmail(email);
+  let customerName = await findCustomerByEmail(email);
+
   if (!customerName) {
-    throw new Error(`Customer not found for email: ${email}`);
+    // Customer nahi mila — auto-create karo signup ke time ya phir pehle order pe
+    logger.warn({ email }, "createErpOrder: Customer not found, attempting auto-create");
+    const displayName = email.split("@")[0];
+    customerName = await createCustomerForEmail(email, displayName);
+
+    if (!customerName) {
+      throw new Error(
+        `Customer not found for email: ${email} and auto-creation failed. ` +
+        "Check ERPNext connectivity and Customer/Contact permissions."
+      );
+    }
+    logger.info({ email, customerName }, "createErpOrder: Customer auto-created successfully");
   }
 
   // ── Step 2: Resolve address ────────────────────────────────────────────────
@@ -566,25 +579,100 @@ async function createErpOrder(payload: OrderJobPayload): Promise<string> {
   }
 
   // ── Step 3: Resolve item codes ─────────────────────────────────────────────
-  const resolvedItems = await Promise.all(
-    items.map(async (i) => {
-      let actualItemCode = i.item_code;
-      const websiteItemRes = await erpFetch(
-        getErpUrl(
-          `/api/resource/Website Item/${encodeURIComponent(i.item_code)}?fields=${encodeURIComponent(
-            JSON.stringify(["item_code", "web_item_name"])
-          )}`
-        ),
+  // Frontend `slug` (e.g. "oxiglo-l-glutathione-750mg") might not match the
+  // actual ERPNext `item_code` (e.g. "OXI-001"). We try multiple resolution
+  // strategies in order:
+  //   1. Look up the Website Item by its name (ERPNext auto-generated ID)
+  //   2. Search Website Items by `route` field (URL-friendly slug)
+  //   3. Try the Item doctype directly with the given code
+  //   4. Use the code as-is (last resort — will fail in ERPNext with a clear message)
+  async function resolveItemCode(rawCode: string): Promise<string> {
+    // Strategy 1: Direct Website Item lookup by name
+    let itemCode = rawCode;
+    try {
+      const webRes = await erpFetch(
+        getErpUrl(`/api/resource/Website Item/${encodeURIComponent(rawCode)}?fields=${encodeURIComponent(
+          JSON.stringify(["item_code", "web_item_name", "route"])
+        )}`),
         { headers: getErpHeaders() }
       );
-      if (websiteItemRes.ok) {
-        const websiteItemData = (await websiteItemRes.json()) as {
-          data?: { item_code?: string };
-        };
-        if (websiteItemData.data?.item_code) {
-          actualItemCode = websiteItemData.data.item_code;
+      if (webRes.ok) {
+        const webData = (await webRes.json()) as { data?: { item_code?: string } };
+        if (webData.data?.item_code) {
+          return webData.data.item_code;
         }
       }
+    } catch {
+      // Fall through to next strategy
+    }
+
+    // Strategy 2: Search Website Items by route
+    try {
+      const searchParams = new URLSearchParams({
+        fields: JSON.stringify(["item_code", "route"]),
+        filters: JSON.stringify([["route", "=", rawCode]]),
+        limit_page_length: "1",
+      });
+      const searchRes = await erpFetch(
+        getErpUrl(`/api/resource/Website Item?${searchParams}`),
+        { headers: getErpHeaders() }
+      );
+      if (searchRes.ok) {
+        const searchData = (await searchRes.json()) as {
+          data?: { item_code: string }[];
+        };
+        if (searchData.data?.[0]?.item_code) {
+          return searchData.data[0].item_code;
+        }
+      }
+    } catch {
+      // Fall through to next strategy
+    }
+
+    // Strategy 3: Try Item doctype directly
+    try {
+      const itemRes = await erpFetch(
+        getErpUrl(`/api/resource/Item/${encodeURIComponent(rawCode)}?fields=${encodeURIComponent(JSON.stringify(["name", "item_code"]))}`),
+        { headers: getErpHeaders() }
+      );
+      if (itemRes.ok) {
+        // Item exists — use rawCode as-is (it's already an item_code)
+        return rawCode;
+      }
+    } catch {
+      // Fall through
+    }
+
+    // Strategy 4: Search Item doctype by item_code
+    try {
+      const searchParams = new URLSearchParams({
+        fields: JSON.stringify(["name"]),
+        filters: JSON.stringify([["item_code", "=", rawCode]]),
+        limit_page_length: "1",
+      });
+      const searchRes = await erpFetch(
+        getErpUrl(`/api/resource/Item?${searchParams}`),
+        { headers: getErpHeaders() }
+      );
+      if (searchRes.ok) {
+        const searchData = (await searchRes.json()) as {
+          data?: { name: string }[];
+        };
+        if (searchData.data?.[0]?.name) {
+          return searchData.data[0].name;
+        }
+      }
+    } catch {
+      // Fall through
+    }
+
+    logger.warn({ rawCode }, "createErpOrder: could not resolve item code via any strategy, using as-is");
+    return rawCode;
+  }
+
+  const resolvedItems = await Promise.all(
+    items.map(async (i) => {
+      const actualItemCode = await resolveItemCode(i.item_code);
       return { item_code: actualItemCode, qty: i.qty, warehouse: defaultWarehouse };
     })
   );
