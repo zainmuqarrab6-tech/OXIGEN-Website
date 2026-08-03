@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { motion } from "motion/react";
 import {
   ArrowUpRight,
@@ -14,7 +15,8 @@ import {
   Lock,
   FlaskConical,
   Headphones,
-  PackageCheck,
+  Loader2,
+  Send,
   ShoppingCart,
   Heart,
   Mail,
@@ -178,7 +180,6 @@ export function Products() {
                 const desc = p.short_description || p.desc || "";
                 const price = isApi ? p.standard_rate || 0 : parsePrice(p.price);
                 const was = isApi ? null : p.was;
-                const tag = isApi ? null : p.tag;
                 const available = isApi ? p.custom_stock_qty !== 0 : p.price !== "Coming Soon";
                 const img = p.image
                   ? p.image.startsWith("http")
@@ -452,7 +453,50 @@ export function FAQ({ showHeading = true }: { showHeading?: boolean }) {
   );
 }
 
+const inputClass =
+  "w-full rounded-xl border border-white/60 bg-white/60 px-4 py-3 text-sm text-ink shadow-inner outline-none backdrop-blur transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/30";
+
 export function Contact() {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const update =
+    (field: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      // 1. Obtain CSRF token (required for all state-changing API requests)
+      const csrfRes = await fetch(`${import.meta.env.VITE_API_URL}/csrf-token`, {
+        credentials: "include",
+      });
+      const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+
+      // 2. POST the contact form to the backend
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+        credentials: "include",
+        body: JSON.stringify(form),
+      });
+      const data = (await res.json()) as { success?: boolean; error?: string };
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Something went wrong. Please try again.");
+      }
+
+      toast.success("Message sent! We'll get back to you shortly.");
+      setForm({ name: "", email: "", phone: "", message: "" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <section id="contact" className="mx-auto max-w-6xl px-5 py-24">
       <Reveal>
@@ -498,40 +542,65 @@ export function Contact() {
                 <span className="rounded-full glass px-4 py-2">Cash on Delivery</span>
               </div>
             </div>
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                window.location.href = brand.whatsapp;
-              }}
-            >
-              {[
-                { label: "Your Name", type: "text", ph: "Enter your name" },
-                { label: "Phone", type: "tel", ph: "03xx xxxxxxx" },
-              ].map((f) => (
-                <div key={f.label}>
-                  <label className="mb-1.5 block text-sm font-medium text-ink">{f.label}</label>
-                  <input
-                    type={f.type}
-                    required
-                    placeholder={f.ph}
-                    className="w-full rounded-xl border border-white/60 bg-white/60 px-4 py-3 text-sm text-ink shadow-inner outline-none backdrop-blur transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-              ))}
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">Your Name</label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={update("name")}
+                  placeholder="Enter your name"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={update("email")}
+                  placeholder="you@example.com"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">Phone</label>
+                <input
+                  type="tel"
+                  required
+                  value={form.phone}
+                  onChange={update("phone")}
+                  placeholder="03xx xxxxxxx"
+                  className={inputClass}
+                />
+              </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-ink">Message</label>
                 <textarea
                   rows={4}
+                  required
+                  value={form.message}
+                  onChange={update("message")}
                   placeholder="How can we help?"
-                  className="w-full resize-none rounded-xl border border-white/60 bg-white/60 px-4 py-3 text-sm text-ink shadow-inner outline-none backdrop-blur transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
+                  className={`${inputClass} resize-none`}
                 />
               </div>
               <button
                 type="submit"
-                className="w-full rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.02]"
+                disabled={submitting}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Send Message
+                {submitting ? (
+                  <>
+                    Sending... <Loader2 className="h-4 w-4 animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    Send Message <Send className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </form>
           </div>
