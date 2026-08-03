@@ -1,51 +1,20 @@
-// Dummy dashboard data. Replace with real API calls when wiring the backend.
-import { catalog } from "./site-data";
+// Placeholder data for dashboard UI — replace with real API calls when wiring the backend.
 
-export type MockOrderStatus =
-  | "Confirmed"
-  | "Processing"
-  | "Packed"
-  | "Shipped"
-  | "Out for Delivery"
-  | "Delivered"
-  | "Cancelled";
-
-export type MockOrder = {
+export type NotificationItem = {
   id: string;
-  date: string;
-  status: MockOrderStatus;
-  paymentStatus: "Paid" | "Pending" | "COD";
-  paymentMethod: string;
-  courier: string;
-  tracking: string;
-  eta: string;
-  items: { slug: string; name: string; img: string; qty: number; price: number }[];
-  subtotal: number;
-  shipping: number;
-  discount: number;
-  total: number;
-  billing: MockAddress;
-  shipping_address: MockAddress;
-  timeline: { label: MockOrderStatus; date: string; done: boolean }[];
+  type: string;
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
 };
 
-export type MockAddress = {
-  id: string;
-  label: string;
-  name: string;
-  phone: string;
-  line1: string;
-  city: string;
-  province: string;
-  postal: string;
-  isDefault?: boolean;
-};
-
-export const mockOrders: MockOrder[] = [];
-
-export const mockAddresses: MockAddress[] = [];
-
-export const mockNotifications: { id: string; type: string; title: string; body: string; time: string; read: boolean }[] = [];
+export const mockNotifications: NotificationItem[] = [
+  { id: "n1", type: "order", title: "Order Confirmed", body: "Your order has been confirmed and is being processed.", time: "10 min ago", read: false },
+  { id: "n2", type: "shipping", title: "Shipped", body: "Your order has been dispatched.", time: "1 day ago", read: false },
+  { id: "n3", type: "promo", title: "Flash Sale!", body: "30% off on OxiGlo — today only.", time: "3 days ago", read: true },
+  { id: "n4", type: "account", title: "Welcome", body: "Welcome to OxiGen!", time: "1 week ago", read: true },
+];
 
 export const mockDevices: { id: string; device: string; location: string; lastActive: string; current?: boolean }[] = [];
 
@@ -59,22 +28,3 @@ export const mockFaqs = [
   { q: "Are products authentic?", a: "100% authentic and sealed — directly sourced from OxiGen warehouses." },
   { q: "Do you offer Cash on Delivery?", a: "Yes, COD is available on all orders across Pakistan." },
 ];
-
-export const mockProfile = {
-  name: "",
-  email: "",
-  phone: "",
-  gender: "",
-  dob: "",
-  avatar: "",
-  memberSince: "",
-  status: "",
-};
-
-export function orderStats(orders: MockOrder[]) {
-  return {
-    total: orders.length,
-    pending: orders.filter((o) => o.status !== "Delivered" && o.status !== "Cancelled").length,
-    completed: orders.filter((o) => o.status === "Delivered").length,
-  };
-}

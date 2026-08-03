@@ -13,6 +13,8 @@ export type Order = {
   date: string;
   status: string;
   total: number;
+};
+export type OrderPlaced = Order & {
   items?: { slug: string; name: string; qty: number; price: number }[];
   customer?: { name: string; email: string; phone: string; address: string; city: string };
 };
@@ -39,8 +41,75 @@ export type Address = {
   isDefault?: boolean;
 };
 
+/* ---------- API response shapes ---------- */
+
+interface ApiResponse<T> {
+  success?: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  queued?: boolean;
+  jobId?: string;
+}
+
+interface LoginResponse {
+  success: boolean;
+  user?: User;
+  message?: string;
+  error?: string;
+}
+
+interface SignupResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+interface CsrfResponse {
+  csrfToken: string;
+}
+
+interface JobStatusResponse {
+  data?: {
+    id: string;
+    status: string;
+    orderName?: string;
+  };
+}
+
+interface ErpOrderRecord {
+  name: string;
+  transaction_date: string;
+  status: string;
+  grand_total: number;
+}
+
+interface ErpAddressRecord {
+  name: string;
+  address_title?: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state?: string;
+  pincode?: string;
+  phone?: string;
+  is_primary_address?: number;
+  is_shipping_address?: number;
+}
+
+interface ErpProfileRecord {
+  full_name?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  mobile_no?: string;
+  phone?: string;
+  gender?: string;
+  birth_date?: string;
+}
+
 type StoreValue = {
-  // cart
   cart: CartLine[];
   cartItems: (CatalogItem & { qty: number })[];
   cartCount: number;
@@ -49,35 +118,29 @@ type StoreValue = {
   removeFromCart: (slug: string) => void;
   setQty: (slug: string, qty: number) => void;
   clearCart: () => void;
-  // drawer
   drawerOpen: boolean;
   setDrawerOpen: (v: boolean) => void;
-  // wishlist
   wishlist: string[];
   wishlistItems: CatalogItem[];
   toggleWishlist: (slug: string) => void;
   inWishlist: (slug: string) => boolean;
-  // auth
   user: User | null;
   signIn: (usr: string, pwd: string) => Promise<boolean>;
   signUp: (email: string, full_name: string) => Promise<boolean>;
   signOut: () => Promise<boolean>;
-  // profile
   profile: UserProfile | null;
   fetchProfile: (email: string) => Promise<void>;
   updateProfile: (patch: Partial<UserProfile>) => Promise<boolean>;
-  // addresses
   addresses: Address[];
   fetchAddresses: (email: string) => Promise<void>;
   addAddress: (addr: Omit<Address, "id">) => Promise<boolean>;
   updateAddress: (id: string, addr: Partial<Address>) => Promise<boolean>;
   deleteAddress: (id: string) => Promise<boolean>;
-  // orders
   orders: Order[];
   placeOrder: (o: {
     items: { slug: string; qty: number }[];
     customer: { name: string; email: string; phone: string; address: string; city: string };
-  }) => Promise<Order | null>;
+  }) => Promise<OrderPlaced | null>;
 };
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -107,6 +170,30 @@ function save<T>(key: string, value: T) {
   }
 }
 
+/** Reusable hook-style helpers to fetch CSRF token and call a non-GET endpoint. */
+async function csrfToken(): Promise<string> {
+  const res = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" });
+  const data: CsrfResponse = await res.json();
+  return data.csrfToken;
+}
+
+/**
+ * Perform a state-changing API request with CSRF token.
+ */
+async function apiCall<TBody extends Record<string, unknown>>(
+  url: string,
+  method: "POST" | "PUT",
+  body: TBody,
+): Promise<unknown> {
+  const token = await csrfToken();
+  return fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+    credentials: "include",
+    body: JSON.stringify(body),
+  }).then((r) => r.json());
+}
+
 /* ------------------------------------------------------------------ */
 /*  Provider                                                           */
 /* ------------------------------------------------------------------ */
@@ -126,9 +213,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Check with server if session is still valid
     fetch(`${API_BASE}/auth/me`, { credentials: "include" })
       .then((r) => r.json())
-      .then((res) => {
-        if (res.success && res.user) {
-          setUser(res.user);
+      .then((res: ApiResponse<{ email: string; name: string }>) => {
+        if (res.success && res.data) {
+          setUser({ email: res.data.email, name: res.data.name });
+        } else if ((res as LoginResponse).user) {
+          setUser((res as LoginResponse).user ?? null);
         } else {
           setUser(null);
         }
@@ -155,66 +244,71 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const fetchOrders = async (email: string) => {
     try {
-      const res = await fetch(`${API_BASE}/user/orders?email=${encodeURIComponent(email)}`, {
-        credentials: "include",
-      }).then((r) => r.json());
+      const res: ApiResponse<ErpOrderRecord[]> = await fetch(
+        `${API_BASE}/user/orders?email=${encodeURIComponent(email)}`,
+        { credentials: "include" },
+      ).then((r) => r.json());
       if (res.data) {
-        const normalized = res.data.map((o: any) => ({
-          id: o.name,
-          date: o.transaction_date,
-          status: o.status,
-          total: o.grand_total,
-        }));
-        setOrders(normalized);
+        setOrders(
+          res.data.map((o) => ({
+            id: o.name,
+            date: o.transaction_date,
+            status: o.status,
+            total: o.grand_total,
+          })),
+        );
       }
-    } catch (e) {
-      console.error("fetchOrders error:", e);
+    } catch {
+      // network error — keep stale data
     }
   };
 
   const fetchAddresses = async (email: string) => {
     try {
-      const res = await fetch(`${API_BASE}/user/addresses?email=${encodeURIComponent(email)}`, {
-        credentials: "include",
-      }).then((r) => r.json());
+      const res: ApiResponse<ErpAddressRecord[]> = await fetch(
+        `${API_BASE}/user/addresses?email=${encodeURIComponent(email)}`,
+        { credentials: "include" },
+      ).then((r) => r.json());
       if (res.data) {
-        const normalized = res.data.map((a: any) => ({
-          id: a.name,
-          label: a.address_title || "Address",
-          name: a.address_title || "Home",
-          phone: a.phone || "",
-          line1: a.address_line1 + (a.address_line2 ? `, ${a.address_line2}` : ""),
-          city: a.city || "",
-          province: a.state || "",
-          postal: a.pincode || "",
-          isDefault: a.is_primary_address === 1 || a.is_shipping_address === 1,
-        }));
-        setAddresses(normalized);
+        setAddresses(
+          res.data.map((a) => ({
+            id: a.name,
+            label: a.address_title || "Address",
+            name: a.address_title || "Home",
+            phone: a.phone || "",
+            line1: a.address_line1 + (a.address_line2 ? `, ${a.address_line2}` : ""),
+            city: a.city || "",
+            province: a.state || "",
+            postal: a.pincode || "",
+            isDefault: a.is_primary_address === 1 || a.is_shipping_address === 1,
+          })),
+        );
       }
-    } catch (e) {
-      console.error("fetchAddresses error:", e);
+    } catch {
+      // network error — keep stale data
     }
   };
 
   const fetchProfile = async (email: string) => {
     try {
-      const res = await fetch(`${API_BASE}/user/profile?email=${encodeURIComponent(email)}`, {
-        credentials: "include",
-      }).then((r) => r.json());
+      const res: ApiResponse<ErpProfileRecord> = await fetch(
+        `${API_BASE}/user/profile?email=${encodeURIComponent(email)}`,
+        { credentials: "include" },
+      ).then((r) => r.json());
       if (res.data) {
         const p = res.data;
         setProfile({
           name: p.full_name || p.username || `${p.first_name || ""} ${p.last_name || ""}`.trim() || "User",
           email: p.email || email,
           phone: p.mobile_no || p.phone || "",
-          gender: p.gender || "Female",
-          dob: p.birth_date || p.dob || "1996-04-12",
+          gender: p.gender || "",
+          dob: p.birth_date || "",
           status: "Premium Member",
           memberSince: "March 2024",
         });
       }
-    } catch (e) {
-      console.error("fetchProfile error:", e);
+    } catch {
+      // network error — keep stale data
     }
   };
 
@@ -275,7 +369,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, full_name: string) => {
     try {
-      const res = await fetch(`${API_BASE}/auth/signup`, {
+      const res: SignupResponse = await fetch(`${API_BASE}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -288,8 +382,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       toast.success("Account created! Check your email to set your password.");
       return true;
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("An unexpected error occurred during sign up.");
       return false;
     }
@@ -297,7 +390,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (usr: string, pwd: string) => {
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res: LoginResponse = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -311,8 +404,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUser(res.user ?? null);
       toast.success(`Welcome back, ${res.user?.name}!`);
       return true;
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("An unexpected error occurred during sign in.");
       return false;
     }
@@ -328,9 +420,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         method: "POST",
         credentials: "include",
       });
-    } catch (err) {
+    } catch {
       // Network error is non-fatal — local state is already cleared.
-      console.warn("signOut: could not reach server, cleared local session only.", err);
     }
     return true;
   };
@@ -338,16 +429,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (patch: Partial<UserProfile>) => {
     try {
       if (!user) return false;
-      const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" }).then(r => r.json());
-      const csrfToken = csrfRes.csrfToken;
 
       const nameParts = (patch.name || "").split(" ");
       const first_name = nameParts[0] || "";
       const last_name = nameParts.slice(1).join(" ") || "";
 
-      const payload: Record<string, any> = {
-        email: user.email,
-      };
+      const payload: Record<string, string | undefined> = { email: user.email };
+
       if (patch.name !== undefined) {
         payload.full_name = patch.name;
         payload.first_name = first_name;
@@ -357,32 +445,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         payload.phone = patch.phone;
         payload.mobile_no = patch.phone;
       }
-      if (patch.gender !== undefined) {
-        payload.gender = patch.gender;
-      }
-      if (patch.dob !== undefined) {
-        payload.birth_date = patch.dob;
-      }
+      if (patch.gender !== undefined) payload.gender = patch.gender;
+      if (patch.dob !== undefined) payload.birth_date = patch.dob;
 
-      const res = await fetch(`${API_BASE}/user/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      }).then((r) => r.json());
+      const res = await apiCall(`${API_BASE}/user/profile`, "PUT", payload as Record<string, unknown>) as ApiResponse<ErpProfileRecord>;
 
       if (res.data) {
         fetchProfile(user.email);
         return true;
       } else {
-        toast.error(res.error || "Failed to update profile.");
+        toast.error((res as { error?: string }).error || "Failed to update profile.");
         return false;
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to update profile.");
       return false;
     }
@@ -390,15 +465,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const addAddress = async (addr: Omit<Address, "id">) => {
     try {
-      const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" }).then(r => r.json());
-      const csrfToken = csrfRes.csrfToken;
-
-      const res = await fetch(`${API_BASE}/user/addresses`, {
+      const token = await csrfToken();
+      const res: ApiResponse<ErpAddressRecord> = await fetch(`${API_BASE}/user/addresses`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
         credentials: "include",
         body: JSON.stringify({
           address_title: addr.label,
@@ -416,11 +486,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (user) fetchAddresses(user.email);
         return true;
       } else {
-        toast.error(res.error || "Failed to add address.");
+        toast.error((res as { error?: string }).error || "Failed to add address.");
         return false;
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to add address.");
       return false;
     }
@@ -428,10 +497,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const updateAddress = async (id: string, addr: Partial<Address>) => {
     try {
-      const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" }).then(r => r.json());
-      const csrfToken = csrfRes.csrfToken;
-
-      const payload: Record<string, any> = {};
+      const token = await csrfToken();
+      const payload: Record<string, string | number> = {};
       if (addr.label) payload.address_title = addr.label;
       if (addr.line1) payload.address_line1 = addr.line1;
       if (addr.city) payload.city = addr.city;
@@ -443,12 +510,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         payload.is_shipping_address = addr.isDefault ? 1 : 0;
       }
 
-      const res = await fetch(`${API_BASE}/user/addresses/${encodeURIComponent(id)}`, {
+      const res: ApiResponse<ErpAddressRecord> = await fetch(`${API_BASE}/user/addresses/${encodeURIComponent(id)}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
         credentials: "include",
         body: JSON.stringify(payload),
       }).then((r) => r.json());
@@ -457,11 +521,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (user) fetchAddresses(user.email);
         return true;
       } else {
-        toast.error(res.error || "Failed to update address.");
+        toast.error((res as { error?: string }).error || "Failed to update address.");
         return false;
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to update address.");
       return false;
     }
@@ -469,14 +532,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const deleteAddress = async (id: string) => {
     try {
-      const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" }).then(r => r.json());
-      const csrfToken = csrfRes.csrfToken;
-
-      const res = await fetch(`${API_BASE}/user/addresses/${encodeURIComponent(id)}`, {
+      const token = await csrfToken();
+      const res: { message?: string; error?: string } = await fetch(`${API_BASE}/user/addresses/${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: {
-          "X-CSRF-Token": csrfToken,
-        },
+        headers: { "X-CSRF-Token": token },
         credentials: "include",
       }).then((r) => r.json());
 
@@ -487,8 +546,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         toast.error(res.error || "Failed to delete address.");
         return false;
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to delete address.");
       return false;
     }
@@ -499,9 +557,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     customer: { name: string; email: string; phone: string; address: string; city: string };
   }) => {
     try {
-      const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" }).then(r => r.json());
-      const csrfToken = csrfRes.csrfToken;
-
       const bodyPayload = {
         items: o.items.map((i) => ({ item_code: i.slug, qty: i.qty })),
         shippingAddress: {
@@ -512,30 +567,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         },
       };
 
-      const res = await fetch(`${API_BASE}/user/orders`, {
+      const res: ApiResponse<unknown> & { jobId?: string } = await fetch(`${API_BASE}/user/orders`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": await csrfToken() },
         credentials: "include",
         body: JSON.stringify(bodyPayload),
       }).then((r) => r.json());
 
       if (!res.queued) {
-        toast.error(res.error || "Order placement failed.");
+        toast.error((res as { error?: string }).error || "Order placement failed.");
         return null;
       }
 
-      const jobId = res.jobId;
+      const jobId = res.jobId!;
       toast.info("Order added to queue. Processing...");
 
       // Poll queue status
-      const poll = async (): Promise<string | null> => {
+      const poll = (): Promise<string | null> => {
         return new Promise((resolvePoll) => {
           const interval = setInterval(async () => {
             try {
-              const jobRes = await fetch(`${API_BASE}/user/orders/job/${jobId}`, { credentials: "include" }).then(r => r.json());
+              const jobRes: JobStatusResponse = await fetch(`${API_BASE}/user/orders/job/${jobId}`, { credentials: "include" }).then((r) => r.json());
               const job = jobRes.data;
               if (job) {
                 if (job.status === "completed") {
@@ -571,7 +623,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       const totalAmount = orderItems.reduce((s, it) => s + it.price * it.qty, 0);
 
-      const placedOrder: Order = {
+      const placedOrder: OrderPlaced = {
         id: orderName,
         date: new Date().toISOString().split("T")[0],
         status: "To Deliver",
@@ -583,8 +635,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setOrders((prev) => [placedOrder, ...prev]);
       clearCart();
       return placedOrder;
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("An unexpected error occurred while placing order.");
       return null;
     }
