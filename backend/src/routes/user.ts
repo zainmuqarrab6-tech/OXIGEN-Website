@@ -5,6 +5,7 @@ import { getErpUrl, getErpHeaders, parseErpError, erpFetch, findCustomerByEmail 
 import { requireAuth, assertOwner } from "../middlewares/requireAuth";
 import { enqueueOrder, getJobStatus, QueueFullError } from "../lib/order-queue";
 import { createRateLimiter } from "../middlewares/rate-limit";
+import { validate, changePasswordSchema } from "../lib/validation";
 
 const router: IRouter = Router();
 
@@ -18,7 +19,7 @@ const USER_FIELDS = ["name","email","full_name","first_name","last_name","mobile
 
 router.get("/user/profile", requireAuth, async (req, res) => {
   const email = req.query["email"] as string | undefined;
-  if (!email) { res.status(400).json({ error: "email query param required." }); return; }
+  if (!email || typeof email !== "string" || email.length > 255) { res.status(400).json({ error: "Valid email query param required." }); return; }
   if (!assertOwner(req, res, email)) return;
 
   try {
@@ -73,22 +74,8 @@ router.put("/user/profile", requireAuth, async (req, res) => {
 // Change Password
 // ---------------------------------------------------------------------------
 
-router.post("/user/change-password", requireAuth, changePasswordLimiter, async (req, res) => {
-  const { old_password, new_password } = req.body as { old_password?: string; new_password?: string };
-  if (!old_password || !new_password) {
-    res.status(400).json({ error: "old_password and new_password are required." }); return;
-  }
-  const isValid =
-    new_password.length >= 8 &&
-    /[a-z]/.test(new_password) &&
-    /[A-Z]/.test(new_password) &&
-    /\d/.test(new_password);
-  if (!isValid) {
-    res.status(400).json({
-      error: "Password must be at least 8 characters and include uppercase, lowercase, and a number.",
-    });
-    return;
-  }
+router.post("/user/change-password", requireAuth, changePasswordLimiter, validate(changePasswordSchema), async (req, res) => {
+  const { old_password, new_password } = req.body;
   try {
     const erpRes = await erpFetch(getErpUrl("/api/method/frappe.core.doctype.user.user.update_password"), {
       method: "POST",
@@ -258,52 +245,7 @@ router.delete("/user/addresses/:name", requireAuth, async (req, res) => {
 
 const ORDER_LIST_FIELDS = ["name","transaction_date","status","grand_total","currency"];
 
-async function findAddressNamesByEmail(email: string): Promise<{
-  shippingAddressName?: string;
-}> {
-  const params = new URLSearchParams({
-    fields: JSON.stringify([
-      "name",
-      "address_type",
-      "email_id",
-      "is_primary_address",
-      "is_shipping_address",
-      "modified",
-    ]),
-    filters: JSON.stringify([["email_id", "=", email]]),
-    limit_page_length: "20",
-    order_by: "modified desc",
-  });
 
-  const addressRes = await erpFetch(
-    getErpUrl(`/api/resource/Address?${params.toString()}`),
-    { headers: getErpHeaders() },
-  );
-
-  if (!addressRes.ok) {
-    return {};
-  }
-
-  const addressData = (await addressRes.json()) as {
-    data: {
-      name: string;
-      address_type?: string;
-      is_primary_address?: 0 | 1;
-      is_shipping_address?: 0 | 1;
-    }[];
-  };
-
-  const addresses = addressData.data ?? [];
-
-  const shipping =
-    addresses.find((a) => a.address_type === "Shipping") ??
-    addresses.find((a) => a.is_shipping_address === 1) ??
-    addresses[0];
-
-  return {
-    shippingAddressName: shipping?.name,
-  };
-}
 
 router.get("/user/orders", requireAuth, async (req, res) => {
   const email = req.query["email"] as string | undefined;

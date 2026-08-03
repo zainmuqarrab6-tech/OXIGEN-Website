@@ -6,8 +6,6 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 
-type WebsiteItemRecord = Record<string, unknown>;
-
 async function fetchSellingPriceForItem(itemCode: string): Promise<number | null> {
   const params = new URLSearchParams({
     fields: JSON.stringify(["price_list_rate", "price_list", "currency"]),
@@ -169,8 +167,6 @@ router.get("/items", async (req, res) => {
       "ranking",
       "has_variants",
       "on_backorder",
-      "custom_stock_qty",
-      "website_warehouse",
     ]);
 
     // Only published Website Items
@@ -316,6 +312,9 @@ router.get("/items", async (req, res) => {
     // ────────────────────────────────────────────────────────────────────────
 
     // Normalize: website_image → image, and if website_image is missing use Item.image
+    // Only return explicitly allowed fields — never forward raw ERP data
+    const SAFE_FIELDS = ["name", "item_code", "item_name", "route", "published", "website_image", "website_image_alt", "thumbnail", "short_description", "description", "web_long_description", "item_group", "brand", "stock_uom", "ranking", "has_variants", "on_backorder"];
+
     const normalized = (data.data as Record<string, unknown>[]).map((item) => {
       const itemCode = item["item_code"] as string;
       const warehouse = item["website_warehouse"] as string | null | undefined;
@@ -327,14 +326,19 @@ router.get("/items", async (req, res) => {
         ? (binQtyMap[`${itemCode}::${warehouse}`] ?? 0)
         : ((item["custom_stock_qty"] as number | null) ?? null);
 
-      return {
-        ...item,
-        image: (item["website_image"] as string | null) || fallback.image || null,
-        item_name: item["web_item_name"] || item["item_name"],
-        standard_rate: resolvedPrice,
-        valuation_rate: resolvedPrice,
-        custom_stock_qty: stockQty,
-      };
+      // Build a safe response with only allowed fields
+      const safeItem: Record<string, unknown> = {};
+      for (const field of SAFE_FIELDS) {
+        if (field in item) safeItem[field] = item[field];
+      }
+
+      safeItem["image"] = (item["website_image"] as string | null) || fallback.image || null;
+      safeItem["item_name"] = (item["web_item_name"] as string) || (item["item_name"] as string);
+      safeItem["standard_rate"] = resolvedPrice;
+      safeItem["valuation_rate"] = resolvedPrice;
+      safeItem["custom_stock_qty"] = stockQty;
+
+      return safeItem;
     });
 
     itemCache.set(cacheKey, normalized);
@@ -345,6 +349,73 @@ router.get("/items", async (req, res) => {
     res.json({ data: normalized, version: itemCache.getVersion() });
   } catch (err) {
     logger.error({ err }, "[items]");
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+// ─── GET /api/items/groups ────────────────────────────────────────────────────
+// Fetches parent Item Groups from ERPNext (categories).
+router.get("/items/groups", async (_req, res) => {
+  try {
+    const cacheKey = "item_groups";
+    const cached = itemCache.get(cacheKey);
+
+    if (cached) {
+      res.setHeader("X-Cache", "HIT");
+      res.setHeader("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+      res.json({ data: cached });
+      return;
+    }
+
+    const fields = JSON.stringify(["item_group_name", "image", "description"]);
+    const filters = JSON.stringify([
+      ["parent_item_group", "=", "All Item Groups"],
+    ]);
+
+    const params = new URLSearchParams({
+      fields,
+      filters,
+      limit_page_length: "100",
+      order_by: "item_group_name asc",
+    });
+
+    const erpRes = await erpFetch(
+      getErpUrl(`/api/resource/Item Group?${params}`),
+      { headers: getErpHeaders() },
+    );
+
+    if (!erpRes.ok) {
+      const err = await erpRes.json().catch(() => ({}));
+      logger.error({ err }, "[items/groups] ERPNext Item Group error");
+      res.status(502).json({ error: "Failed to fetch categories from ERPNext." });
+      return;
+    }
+
+    const json = (await erpRes.json()) as { data: Record<string, unknown>[] };
+
+    // Normalize: map ERPNext fields to consistent output
+    const normalized = json.data.map((group) => ({
+      name: group["item_group_name"] as string,
+      image: (group["image"] as string) ?? null,
+      description: (group["description"] as string) ?? "",
+      slug: slugify(group["item_group_name"] as string),
+    }));
+
+    itemCache.set(cacheKey, normalized);
+
+    res.setHeader("X-Cache", "MISS");
+    res.setHeader("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+    res.json({ data: normalized });
+  } catch (err) {
+    logger.error({ err }, "[items/groups]");
     res.status(500).json({ error: "Internal server error." });
   }
 });
@@ -537,6 +608,38 @@ router.get("/items/:name", async (req, res) => {
     res.json({ data: itemData.data });
   } catch (err) {
     logger.error({ err }, "[items/:name]");
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ─── GET /api/items/image/* ────────────────────────────────────────────
+// Proxies images from ERPNext so the browser never sees the internal ERP URL.
+// Wildcard param captures the full path after /image/ (e.g. /files/oxigen-...jpg)
+router.get("/items/image/*", async (req, res) => {
+  try {
+    const filepath = (req.params as { [key: string]: string })["0"];
+    if (!filepath) {
+      res.status(400).json({ error: "File path required." });
+      return;
+    }
+    const erpRes = await erpFetch(
+      getErpUrl(`/${filepath}`),
+      { headers: getErpHeaders() },
+    );
+
+    if (!erpRes.ok) {
+      res.status(404).json({ error: "Image not found." });
+      return;
+    }
+
+    const contentType = erpRes.headers.get("Content-Type") || "image/jpeg";
+    const buffer = await erpRes.arrayBuffer();
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    logger.error({ err }, "[items/image]");
     res.status(500).json({ error: "Internal server error." });
   }
 });

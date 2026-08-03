@@ -8,24 +8,27 @@ interface RateLimitEntry {
 const store = new Map<string, RateLimitEntry>();
 
 // Different limits for different route types
+const isDev = process.env.NODE_ENV === "development";
+
 const LIMITS = {
-  login:          { max: 10, windowMs: 15 * 60 * 1000 }, // 10 attempts / 15 min
-  signup:         { max: 5,  windowMs: 60 * 60 * 1000 }, // 5 attempts / hour
-  forgotPassword: { max: 5,  windowMs: 60 * 60 * 1000 }, // 5 attempts / hour
-  resetPassword:  { max: 5,  windowMs: 60 * 60 * 1000 }, // 5 attempts / hour
-  setPassword:    { max: 10, windowMs: 60 * 60 * 1000 }, // 10 attempts / hour
-  changePassword: { max: 5,  windowMs: 15 * 60 * 1000 }, // 5 attempts / 15 min
-  contact:        { max: 5,  windowMs: 60 * 60 * 1000 }, // 5 submissions / hour
-  default:        { max: 100, windowMs: 60 * 1000 },      // 100 requests / min
+  login:          isDev ? { max: 100, windowMs: 15 * 60 * 1000 } : { max: 10, windowMs: 15 * 60 * 1000 },
+  signup:         isDev ? { max: 50,  windowMs: 60 * 60 * 1000 } : { max: 5,  windowMs: 60 * 60 * 1000 },
+  forgotPassword: isDev ? { max: 20,  windowMs: 60 * 60 * 1000 } : { max: 5,  windowMs: 60 * 60 * 1000 },
+  resetPassword:  isDev ? { max: 20,  windowMs: 60 * 60 * 1000 } : { max: 5,  windowMs: 60 * 60 * 1000 },
+  setPassword:    isDev ? { max: 50,  windowMs: 60 * 60 * 1000 } : { max: 10, windowMs: 60 * 60 * 1000 },
+  changePassword: isDev ? { max: 20,  windowMs: 15 * 60 * 1000 } : { max: 5,  windowMs: 15 * 60 * 1000 },
+  contact:        isDev ? { max: 50,  windowMs: 60 * 60 * 1000 } : { max: 5,  windowMs: 60 * 60 * 1000 },
+  default:        isDev ? { max: 1000, windowMs: 60 * 1000 }     : { max: 100, windowMs: 60 * 1000 },
 } as const;
 
 // Cleanup old entries every 30 minutes to prevent memory leak
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of store) {
     if (now > entry.resetAt) store.delete(key);
   }
 }, 30 * 60 * 1000);
+cleanupTimer.unref();
 
 export function createRateLimiter(type: keyof typeof LIMITS) {
   const { max, windowMs } = LIMITS[type];

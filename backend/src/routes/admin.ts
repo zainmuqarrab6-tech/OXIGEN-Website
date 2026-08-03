@@ -131,7 +131,6 @@ router.get(
       erpnext: {
         alive: erpAlive,
         latencyMs: erpLatencyMs,
-        url: process.env["ERPNEXT_URL"] ?? "",
       },
       queue: {
         pending: queue.pending,

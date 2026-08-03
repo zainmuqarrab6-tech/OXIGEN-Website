@@ -11,7 +11,6 @@ import { rateLimitMiddleware } from "./middlewares/rate-limit";
 import { getQueueStats } from "./lib/order-queue";
 
 const app: Express = express();
-// app.set('trust proxy', 1);
 app.set('trust proxy', 1);
 
 // Request ID Middleware
@@ -31,12 +30,14 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
       },
     },
-    hsts: process.env.NODE_ENV === "production",
+    hsts: process.env.NODE_ENV === "production" ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   })
