@@ -30,7 +30,6 @@ router.post(
         mobile_no: phone,
         description: message,
         source: "Website Contact Form",
-        lead_owner: "website-admin", // Default lead owner
       };
 
       const erpResponse = await erpFetch(

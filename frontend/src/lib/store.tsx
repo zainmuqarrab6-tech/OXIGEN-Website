@@ -271,17 +271,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ).then((r) => r.json());
       if (res.data) {
         setAddresses(
-          res.data.map((a) => ({
-            id: a.name,
-            label: a.address_title || "Address",
-            name: a.address_title || "Home",
-            phone: a.phone || "",
-            line1: a.address_line1 + (a.address_line2 ? `, ${a.address_line2}` : ""),
-            city: a.city || "",
-            province: a.state || "",
-            postal: a.pincode || "",
-            isDefault: a.is_primary_address === 1 || a.is_shipping_address === 1,
-          })),
+          res.data.map((a) => {
+            const title = a.address_title || "";
+            const parts = title.split(" | ");
+            const label = parts[0] || "Address";
+            const name = parts[1] || parts[0] || "Recipient";
+            return {
+              id: a.name,
+              label: label,
+              name: name,
+              phone: a.phone || "",
+              line1: a.address_line1 + (a.address_line2 ? `, ${a.address_line2}` : ""),
+              city: a.city || "",
+              province: a.state || "",
+              postal: a.pincode || "",
+              isDefault: a.is_primary_address === 1 || a.is_shipping_address === 1,
+            };
+          }),
         );
       }
     } catch {
@@ -471,7 +477,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
         credentials: "include",
         body: JSON.stringify({
-          address_title: addr.label,
+          address_title: `${addr.label} | ${addr.name}`,
           address_type: "Shipping",
           address_line1: addr.line1,
           city: addr.city,
@@ -499,7 +505,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const token = await csrfToken();
       const payload: Record<string, string | number> = {};
-      if (addr.label) payload.address_title = addr.label;
+
+      if (addr.label && addr.name) {
+        payload.address_title = `${addr.label} | ${addr.name}`;
+      } else if (addr.label || addr.name) {
+        const existing = addresses.find((a) => a.id === id);
+        const l = addr.label ?? existing?.label ?? "Address";
+        const n = addr.name ?? existing?.name ?? "Recipient";
+        payload.address_title = `${l} | ${n}`;
+      }
+
       if (addr.line1) payload.address_line1 = addr.line1;
       if (addr.city) payload.city = addr.city;
       if (addr.province) payload.state = addr.province;
