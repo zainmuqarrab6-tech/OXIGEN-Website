@@ -39,6 +39,8 @@ routeTree.gen.ts
 .env
 .env.*
 !.env.example
+cookies.txt
+*.cookies.txt
 
 
 # =========================
@@ -99,3 +101,7 @@ desktop.ini
 .claude/
 .superpowers/
 .gemini/
+.playwright-mcp/
+
+# Documentation
+docs/
