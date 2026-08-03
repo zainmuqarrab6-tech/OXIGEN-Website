@@ -17,7 +17,7 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Reveal } from "@/components/site/Reveal";
 import { useStore } from "@/lib/store";
-import { getProduct, catalog, formatPKR, getProductReviews, getReviewStats } from "@/lib/site-data";
+import { getProduct, catalog, formatPKR, slugify, getProductReviews, getReviewStats } from "@/lib/site-data";
 
 function Stars({ rating, className = "h-4 w-4" }: { rating: number; className?: string }) {
   return (
@@ -107,10 +107,58 @@ function StockTimer({ slug }: { slug: string }) {
 }
 
 export const Route = createFileRoute("/product/$slug")({
-  loader: ({ params }) => {
-    const product = getProduct(params.slug);
-    if (!product) throw notFound();
-    return { product };
+  loader: async ({ params }) => {
+    // Try the static catalog first
+    const catalogProduct = getProduct(params.slug);
+    if (catalogProduct) return { product: catalogProduct, fromAPI: false };
+
+    // Fallback: fetch from the ERP API and resolve by route
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/items`,
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const apiItems = json.data || [];
+        const match = apiItems.find(
+          (i: Record<string, unknown>) =>
+            (i.route as string)?.split("/").pop() === params.slug,
+        );
+        if (match) {
+          const itemRes = await fetch(
+            `${import.meta.env.VITE_API_URL}/items/${encodeURIComponent(match["name"] as string)}`,
+          );
+          if (itemRes.ok) {
+            const itemJson = await itemRes.json();
+            const d = itemJson.data;
+            // Normalize API product to CatalogItem shape
+            const normalized = {
+              slug: (d.route as string)?.split("/").pop() ?? slugify(d.item_name || ""),
+              name: d.web_item_name || d.item_name,
+              subtitle: (d.short_description as string) || "",
+              desc: (d.description as string) || "",
+              price: d.standard_rate || 0,
+              was: 0,
+              tag: (d.item_group as string) || "",
+              img: d.image
+                ? `${import.meta.env.VITE_API_URL}/items/image${d.image}`
+                : `/api/placeholder/${d.item_code}`,
+              gallery: (d.slideshow_images as string[])?.map(
+                (i: string) => `${import.meta.env.VITE_API_URL}/items/image${i}`,
+              ) || [],
+              highlights: [],
+              ingredients: (d.web_long_description as string) || "",
+              available: ((d.custom_stock_qty as number) || 0) > 0,
+            };
+            return { product: normalized, fromAPI: true };
+          }
+        }
+      }
+    } catch {
+      // ignore — fall through to not-found
+    }
+
+    throw notFound();
   },
   head: ({ loaderData, params }) => {
     if (!loaderData)
@@ -181,9 +229,10 @@ function ProductPage() {
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
+
   const saved = inWishlist(product.slug);
-  const related = catalog.filter((p) => p.slug !== product.slug).slice(0, 3);
-  const gallery = product.gallery.length ? product.gallery : [product.img];
+  const related = catalog.filter((prod) => prod.slug !== product.slug).slice(0, 3);
+  const gallery = product.gallery?.length ? product.gallery : [product.img];
   const reviews = getProductReviews(product.slug);
   const { total: reviewCount, avg: avgRating } = getReviewStats(reviews);
 

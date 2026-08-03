@@ -3,7 +3,7 @@ import { useState } from "react";
 import { CheckCircle2, Lock, ShoppingBag, ArrowRight } from "lucide-react";
 import { SiteLayout, PageHeader } from "@/components/site/SiteLayout";
 import { Reveal } from "@/components/site/Reveal";
-import { useStore, type Order } from "@/lib/store";
+import { useStore, type OrderPlaced } from "@/lib/store";
 import { formatPKR } from "@/lib/site-data";
 
 export const Route = createFileRoute("/checkout")({
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/checkout")({
 
 function CheckoutPage() {
   const { cartItems, subtotal, placeOrder, user } = useStore();
-  const [placed, setPlaced] = useState<Order | null>(null);
+  const [placed, setPlaced] = useState<OrderPlaced | null>(null);
   const [form, setForm] = useState({
     name: user?.name ?? "",
     email: user?.email ?? "",

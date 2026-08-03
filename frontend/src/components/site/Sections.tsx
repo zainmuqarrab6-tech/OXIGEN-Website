@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import {
   ArrowUpRight,
@@ -53,6 +53,28 @@ function Heading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?
 }
 
 export function Categories({ showHeading = true }: { showHeading?: boolean }) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/items/groups`)
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((json) => {
+        setData(json.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  const displayCategories = error ? categories : data;
+
   return (
     <section
       id="categories"
@@ -68,32 +90,39 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
         </Reveal>
       )}
       <div className={`${showHeading ? "mt-14" : ""} grid gap-6 sm:grid-cols-2 lg:grid-cols-4`}>
-        {categories.map((c, i) => (
-          <Reveal key={c.title} delay={i * 0.08}>
-            <Link
-              to="/shop"
-              className="group relative block overflow-hidden rounded-3xl glass p-5 transition-all duration-500 hover:-translate-y-2"
-            >
-              <div className="relative mb-5 aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-secondary to-white">
-                <img
-                  src={c.img}
-                  alt={`${c.title} supplements`}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-              </div>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-display text-lg font-bold text-ink">{c.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{c.desc}</p>
-                </div>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-white transition-transform duration-300 group-hover:rotate-45">
-                  <ArrowUpRight className="h-4 w-4" />
-                </span>
-              </div>
-            </Link>
-          </Reveal>
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="aspect-square animate-pulse rounded-3xl bg-secondary glass p-5" />
+            ))
+          : displayCategories.map((c, i) => (
+              <Reveal key={c.name || c.title} delay={i * 0.08}>
+                <Link
+                  to="/category/$slug"
+                  params={{ slug: c.slug || slugify(c.title) }}
+                  className="group relative block overflow-hidden rounded-3xl glass p-5 transition-all duration-500 hover:-translate-y-2"
+                >
+                  <div className="relative mb-5 aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-secondary to-white">
+                    {(c.img || c.image) && (
+                      <img
+                        src={c.img || (c.image?.startsWith("/") ? `${import.meta.env.VITE_API_URL}/items/image${c.image}` : c.image)}
+                        alt={`${c.name || c.title} supplements`}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                    )}
+                  </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-ink">{c.name || c.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{c.description || c.desc}</p>
+                    </div>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-white transition-transform duration-300 group-hover:rotate-45">
+                      <ArrowUpRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </Link>
+              </Reveal>
+            ))}
       </div>
     </section>
   );

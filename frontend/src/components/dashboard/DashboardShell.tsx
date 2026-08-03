@@ -21,6 +21,11 @@ import oxigenLogo from "@/assets/oxigen-logo.png";
 import { useStore } from "@/lib/store";
 import { mockNotifications } from "@/lib/dashboard-mock";
 import { cn } from "@/lib/utils";
+import type { UserProfile } from "@/lib/store";
+
+function initials(name: string): string {
+  return name.split(" ").map((n) => n[0]).slice(0, 2).join("");
+}
 
 type NavItem = { to: string; label: string; icon: any; exact?: boolean };
 
@@ -80,6 +85,8 @@ export function DashboardShell({ children }: { children?: ReactNode }) {
           <DashboardHeader
             title={title}
             unread={unread}
+            user={user}
+            profile={profile}
             onOpenMenu={() => setMobileOpen(true)}
           />
 
@@ -194,10 +201,14 @@ function SidebarBody({
 function DashboardHeader({
   title,
   unread,
+  user,
+  profile,
   onOpenMenu,
 }: {
   title: string;
   unread: number;
+  user: { name?: string; email?: string } | null;
+  profile: { name?: string } | null;
   onOpenMenu: () => void;
 }) {
   return (
@@ -247,11 +258,7 @@ function DashboardHeader({
           className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-md shadow-primary/25"
           aria-label="Profile"
         >
-          {(() => {
-            const { user, profile } = useStore();
-            const displayName = profile?.name || user?.name || "User";
-            return displayName.split(" ").map((n) => n[0]).slice(0, 2).join("");
-          })()}
+          {initials(profile?.name || user?.name || "User")}
         </Link>
       </div>
     </header>
