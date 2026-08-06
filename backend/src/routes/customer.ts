@@ -36,7 +36,11 @@ router.put("/customer/profile", requireAuth, async (req: Request, res: Response)
       userPatch.phone = mobile_no;
     }
     if (Object.keys(userPatch).length > 0) {
-      await frappeService.updateProfile(email, userPatch).catch(() => {});
+      try {
+        await frappeService.updateProfile(email, userPatch);
+      } catch (err) {
+        logger.error({ err }, "[customer/profile PUT] updateProfile failed");
+      }
     }
 
     const result = await frappeService.updateCustomerProfile(email, req.body as Record<string, unknown>);
