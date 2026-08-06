@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Lock, Eye, EyeOff, KeyRound } from "lucide-react";
 import { SiteLayout, PageHeader } from "@/components/site/SiteLayout";
 import { Reveal } from "@/components/site/Reveal";
+import { csrfToken } from "@/lib/store";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
@@ -53,7 +54,7 @@ function SetPasswordPage() {
     try {
       const res = await fetch(`${API_BASE}/auth/set-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": await csrfToken() },
         credentials: "include",
         body: JSON.stringify({ token, email, password }),
       }).then((r) => r.json());
