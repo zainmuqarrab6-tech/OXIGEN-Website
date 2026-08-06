@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { catalog, type CatalogItem } from "./site-data";
+import { catalog, type CatalogItem, slugify } from "./site-data";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -114,6 +114,10 @@ type StoreValue = {
   cartItems: (CatalogItem & { qty: number })[];
   cartCount: number;
   subtotal: number;
+  /** Full product catalog: static catalog + Frappe Website Items (via API). */
+  catalog: CatalogItem[];
+  /** Frappe Website Items only (fetched via API). Empty until loaded. */
+  apiCatalog: CatalogItem[];
   addToCart: (slug: string, qty?: number) => void;
   removeFromCart: (slug: string) => void;
   setQty: (slug: string, qty: number) => void;
@@ -128,6 +132,7 @@ type StoreValue = {
   signIn: (usr: string, pwd: string) => Promise<boolean>;
   signUp: (email: string, full_name: string) => Promise<boolean>;
   signOut: () => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<boolean>;
   profile: UserProfile | null;
   fetchProfile: (email: string) => Promise<void>;
   updateProfile: (patch: Partial<UserProfile>) => Promise<boolean>;
@@ -171,7 +176,7 @@ function save<T>(key: string, value: T) {
 }
 
 /** Reusable hook-style helpers to fetch CSRF token and call a non-GET endpoint. */
-async function csrfToken(): Promise<string> {
+export async function csrfToken(): Promise<string> {
   const res = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" });
   const data: CsrfResponse = await res.json();
   return data.csrfToken;
@@ -205,11 +210,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // API-backed products (Website Items from ERPNext), merged with the static
+  // catalog so wishlist/cart slugs resolve regardless of where they came from.
+  const [apiCatalog, setApiCatalog] = useState<CatalogItem[]>([]);
+
+  // Combined lookup: static catalog first, then API-backed products. This lets
+  // a saved slug resolve whether it came from a static card (long slug) or an
+  // API product page (route slug) — fixing the empty-wishlist bug.
+  const allCatalog = useMemo(() => {
+    const seen = new Set(catalog.map((c) => c.slug));
+    const merged = [...catalog];
+    for (const item of apiCatalog) {
+      if (!seen.has(item.slug)) {
+        seen.add(item.slug);
+        merged.push(item);
+      }
+    }
+    return merged;
+  }, [apiCatalog]);
 
   // hydrate from storage after mount (avoids SSR mismatch)
   useEffect(() => {
     setCart(load<CartLine[]>("oxi_cart", []));
     setWishlist(load<string[]>("oxi_wishlist", []));
+
+    // Fetch the ERPNext Website Item catalog once so wishlist/cart slugs that
+    // come from product pages (route-based, e.g. "nutri-cept") can be resolved.
+    fetch(`${API_BASE}/items?limit=200`)
+      .then((r) => r.json())
+      .then((json: { data?: Record<string, unknown>[] }) => {
+        const items = (json.data ?? []).map((i) => {
+          const routeSlug = (i.route as string)?.split("/").pop() ?? "";
+          return {
+            slug: routeSlug || slugify((i.item_name as string) || (i.item_code as string) || ""),
+            name: (i.web_item_name as string) || (i.item_name as string) || "",
+            subtitle: (i.short_description as string) || "",
+            desc: (i.description as string) || "",
+            price: (i.standard_rate as number) || 0,
+            was: 0,
+            tag: (i.item_group as string) || "",
+            img: (i.image as string)?.startsWith("http")
+              ? (i.image as string)
+              : i.image
+                ? `${API_BASE}/items/image${i.image}`
+                : `/api/placeholder/${i.item_code}`,
+            gallery: [],
+            highlights: [],
+            ingredients: (i.web_long_description as string) || "",
+            available: (i.custom_stock_qty as number | null | undefined) !== 0,
+          } satisfies CatalogItem;
+        });
+        setApiCatalog(items);
+      })
+      .catch(() => {
+        // Non-fatal — wishlist/cart still work for static catalog products.
+      });
+
     // Check with server if session is still valid
     fetch(`${API_BASE}/auth/me`, { credentials: "include" })
       .then((r) => r.json())
@@ -331,7 +387,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [user, hydrated]);
 
   const addToCart = (slug: string, qty = 1) => {
-    const product = catalog.find((p) => p.slug === slug);
+    const product = allCatalog.find((p) => p.slug === slug);
     if (!product) return;
     if (!product.available) {
       toast.info(`${product.name} is coming soon.`);
@@ -360,7 +416,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const clearCart = () => setCart([]);
 
   const toggleWishlist = (slug: string) => {
-    const product = catalog.find((p) => p.slug === slug);
+    const product = allCatalog.find((p) => p.slug === slug);
     setWishlist((prev) => {
       if (prev.includes(slug)) {
         toast(`Removed from wishlist`);
@@ -412,6 +468,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return true;
     } catch {
       toast.error("An unexpected error occurred during sign in.");
+      return false;
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      const token = await csrfToken();
+      const res: { message?: string; error?: string } = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+        credentials: "include",
+        body: JSON.stringify({ email }),
+      }).then((r) => r.json());
+
+      if (res.error) {
+        toast.error(res.error);
+        return false;
+      }
+      toast.success(res.message || "If this email is registered, a reset link has been sent.");
+      return true;
+    } catch {
+      toast.error("An unexpected error occurred. Please try again.");
       return false;
     }
   };
@@ -573,6 +651,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }) => {
     try {
       const bodyPayload = {
+        email: o.customer.email,
         items: o.items.map((i) => ({ item_code: i.slug, qty: i.qty })),
         shippingAddress: {
           address_line1: o.customer.address,
@@ -582,14 +661,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         },
       };
 
-      const res: ApiResponse<unknown> & { jobId?: string } = await fetch(`${API_BASE}/user/orders`, {
+      const res: ApiResponse<unknown> & {
+        jobId?: string;
+        orderName?: string;
+        queued?: boolean;
+      } = await fetch(`${API_BASE}/user/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": await csrfToken() },
         credentials: "include",
         body: JSON.stringify(bodyPayload),
       }).then((r) => r.json());
 
-      if (!res.queued) {
+      // Direct placement succeeded — ERPNext placed the order immediately.
+      if (res.queued === false && res.orderName) {
+        const orderItems = o.items.map((it) => {
+          const product = allCatalog.find((c) => c.slug === it.slug);
+          return {
+            slug: it.slug,
+            name: product?.name || it.slug,
+            qty: it.qty,
+            price: product?.price || 0,
+          };
+        });
+        const totalAmount = orderItems.reduce((s, it) => s + it.price * it.qty, 0);
+        const placedOrder: OrderPlaced = {
+          id: res.orderName,
+          date: new Date().toISOString().split("T")[0],
+          status: "To Deliver",
+          total: totalAmount,
+          customer: o.customer,
+          items: orderItems,
+        };
+        setOrders((prev) => [placedOrder, ...prev]);
+        toast.success("Order placed successfully!");
+        clearCart();
+        return placedOrder;
+      }
+
+      // No job id and no order name — genuine failure.
+      if (!res.queued && !res.orderName) {
         toast.error((res as { error?: string }).error || "Order placement failed.");
         return null;
       }
@@ -627,7 +737,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       const orderItems = o.items.map((it) => {
-        const product = catalog.find((c) => c.slug === it.slug);
+        const product = allCatalog.find((c) => c.slug === it.slug);
         return {
           slug: it.slug,
           name: product?.name || it.slug,
@@ -659,14 +769,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<StoreValue>(() => {
     const cartItems = cart
       .map((l) => {
-        const p = catalog.find((c) => c.slug === l.slug);
+        const p = allCatalog.find((c) => c.slug === l.slug);
         return p ? { ...p, qty: l.qty } : null;
       })
       .filter(Boolean) as (CatalogItem & { qty: number })[];
     const cartCount = cart.reduce((s, l) => s + l.qty, 0);
     const subtotal = cartItems.reduce((s, l) => s + l.price * l.qty, 0);
     const wishlistItems = wishlist
-      .map((s) => catalog.find((c) => c.slug === s))
+      .map((s) => allCatalog.find((c) => c.slug === s))
       .filter(Boolean) as CatalogItem[];
 
     return {
@@ -674,6 +784,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cartItems,
       cartCount,
       subtotal,
+      catalog: allCatalog,
+      apiCatalog,
       addToCart,
       removeFromCart,
       setQty,
@@ -688,6 +800,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
+      forgotPassword,
       profile,
       fetchProfile,
       updateProfile,
@@ -700,7 +813,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       placeOrder,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart, wishlist, user, orders, drawerOpen, profile, addresses]);
+  }, [cart, wishlist, user, orders, drawerOpen, profile, addresses, allCatalog]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
