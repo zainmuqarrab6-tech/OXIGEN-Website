@@ -92,15 +92,28 @@ export const authTokenService = {
    */
   verifyToken(rawToken: string, email: string): boolean {
     const hashedToken = hashToken(rawToken);
+    logger.info({ email, hashedToken, rawToken }, "[authTokenService.verifyToken] Attempting verification");
     const entry = tokenStore.get(hashedToken);
 
-    if (!entry || entry.email !== email || entry.expires < Date.now()) {
+    if (!entry) {
+      logger.warn({ email, hashedToken }, "[authTokenService.verifyToken] Token not found in store");
+      return false;
+    }
+
+    if (entry.email !== email) {
+      logger.warn({ email, tokenEmail: entry.email }, "[authTokenService.verifyToken] Email mismatch");
+      return false;
+    }
+
+    if (entry.expires < Date.now()) {
+      logger.warn({ email, expires: entry.expires, now: Date.now() }, "[authTokenService.verifyToken] Token expired");
       return false;
     }
 
     // Consume the token (one-time use)
     tokenStore.delete(hashedToken);
     saveTokenStore(tokenStore);
+    logger.info({ email }, "[authTokenService.verifyToken] Token verified and consumed");
     return true;
   },
 
