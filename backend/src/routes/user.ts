@@ -1,11 +1,12 @@
-import { logger } from "../lib/logger";
+import { logger } from "../lib/logger.js";
 import { Router, type IRouter } from "express";
 import { createHash } from "crypto";
-import { getErpUrl, getErpHeaders, parseErpError, erpFetch, findCustomerByEmail } from "../lib/erpnext-client";
-import { requireAuth, assertOwner } from "../middlewares/requireAuth";
-import { enqueueOrder, getJobStatus, QueueFullError } from "../lib/order-queue";
-import { createRateLimiter } from "../middlewares/rate-limit";
-import { validate, changePasswordSchema } from "../lib/validation";
+import { getErpUrl, getErpHeaders, parseErpError, erpFetch, findCustomerByEmail } from "../lib/erpnext-client.js";
+import { requireAuth, assertOwner } from "../middlewares/requireAuth.js";
+import { enqueueOrder, getJobStatus, QueueFullError } from "../lib/order-queue.js";
+import { ErpAdapter } from "../services/erp-adapter.js";
+import { createRateLimiter } from "../middlewares/rate-limit.js";
+import { validate, changePasswordSchema } from "../lib/validation.js";
 
 const router: IRouter = Router();
 
@@ -279,11 +280,9 @@ router.get("/user/orders", requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/user/orders — Enqueue a Sales Order (queue + retry mechanism)
-router.post("/user/orders", requireAuth, async (req, res) => {
-  const email = req.loggedInEmail!;
-  const defaultWarehouse = process.env["DEFAULT_WAREHOUSE"];
-  const defaultCompany = process.env["DEFAULT_COMPANY"];
+// POST /api/user/orders — Place a Sales Order (direct when ERPNext is up,
+// queue + retry fallback when it is temporarily unreachable)
+router.post("/user/orders", async (req, res) => {
   const { items, delivery_date, addressName, shippingAddress, setAsDefault } = req.body as {
     items?: { item_code: string; item_name?: string; qty: number }[];
     delivery_date?: string;
@@ -302,6 +301,20 @@ router.post("/user/orders", requireAuth, async (req, res) => {
     /** true = link the address with the customer and mark it as default */
     setAsDefault?: boolean;
   };
+
+  // Logged-in customers are identified by their ERPNext session; guest
+  // checkout is identified by the shipping email.
+  const sessionEmail = req.loggedInEmail;
+  const guestEmail = (req.body as { email?: string }).email;
+  const email = sessionEmail ?? guestEmail;
+
+  if (!email) {
+    res.status(400).json({ error: "email is required for checkout." });
+    return;
+  }
+
+  const defaultWarehouse = process.env["DEFAULT_WAREHOUSE"];
+  const defaultCompany = process.env["DEFAULT_COMPANY"];
 
   if (!items || items.length === 0) {
     res.status(400).json({ error: "items array required." }); return;
@@ -341,19 +354,51 @@ router.post("/user/orders", requireAuth, async (req, res) => {
     )
     .digest("hex");
 
-  // ── Enqueue — returns immediately (202 Accepted) ────────────────────────────
+  // ── Build order payload ─────────────────────────────────────────────────────
+  const payload = {
+    email,
+    items: items.map(({ item_code, qty }) => ({ item_code, qty })),
+    delivery_date,
+    addressName,
+    shippingAddress,
+    setAsDefault,
+    defaultWarehouse,
+    defaultCompany,
+  };
+
+  // ── Try direct placement first — ERPNext is healthy in the normal case ─────
+  try {
+    const orderName = await ErpAdapter.createErpOrder(payload);
+    res.status(201).json({
+      queued: false,
+      orderName,
+      message: "Order placed successfully.",
+    });
+    return;
+  } catch (directErr) {
+    const msg = directErr instanceof Error ? directErr.message : String(directErr);
+    logger.warn({ err: msg, email }, "user/orders: direct placement failed, falling back to queue");
+
+    // If the failure is not connectivity (e.g. validation, missing customer),
+    // surface it immediately instead of queueing something that will never succeed.
+    const isConnectivityError =
+      msg.includes("fetch failed") ||
+      msg.includes("ECONNREFUSED") ||
+      msg.includes("ETIMEDOUT") ||
+      msg.includes("AbortError") ||
+      msg.includes("ERPNext responded with 5") ||
+      msg.includes("Status 5");
+
+    if (!isConnectivityError) {
+      res.status(502).json({ error: `Order could not be placed: ${msg}` });
+      return;
+    }
+  }
+
+  // ── Fallback: enqueue — returns immediately (202 Accepted) ─────────────────
   let jobId: string;
   try {
-    jobId = enqueueOrder(idempotencyKey, {
-      email,
-      items: items.map(({ item_code, qty }) => ({ item_code, qty })),
-      delivery_date,
-      addressName,
-      shippingAddress,
-      setAsDefault,
-      defaultWarehouse,
-      defaultCompany,
-    });
+    jobId = enqueueOrder(idempotencyKey, payload);
   } catch (err) {
     if (err instanceof QueueFullError) {
       res.status(503).json({
@@ -368,7 +413,7 @@ router.post("/user/orders", requireAuth, async (req, res) => {
   res.status(202).json({
     queued: true,
     jobId,
-    message: "Order added to queue. Check status at /api/user/orders/job/:jobId.",
+    message: "ERPNext is temporarily unavailable. Order added to queue. Check status at /api/user/orders/job/:jobId.",
   });
 });
 
