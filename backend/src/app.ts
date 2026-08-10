@@ -4,11 +4,14 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import { randomUUID } from "crypto";
+import { existsSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 import { doubleCsrf } from "csrf-csrf";
-import router from "./routes";
-import { logger } from "./lib/logger";
-import { rateLimitMiddleware } from "./middlewares/rate-limit";
-import { getQueueStats } from "./lib/order-queue";
+import router from "./routes/index.js";
+import { logger } from "./lib/logger.js";
+import { rateLimitMiddleware } from "./middlewares/rate-limit.js";
+import { getQueueStats } from "./lib/order-queue.js";
 
 const app: Express = express();
 app.set('trust proxy', 1);
@@ -29,12 +32,13 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+scriptSrc: ["'self'", "https://static.cloudflareinsights.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'"],
+         connectSrc: ["'self'", "https://cloudflareinsights.com"],
         frameAncestors: ["'none'"],
+         upgradeInsecureRequests: null, 
       },
     },
     hsts: process.env.NODE_ENV === "production" ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
@@ -44,11 +48,37 @@ app.use(
 );
 
 // 2. CORS — Strict Configuration
-const allowedOrigin = process.env["FRONTEND_ORIGIN"] ?? "http://localhost:5173";
+const configuredOrigins = [
+  ...(process.env["FRONTEND_ORIGIN"] ? process.env["FRONTEND_ORIGIN"].split(",") : []),
+  ...(process.env["FRONTEND_URL"] ? process.env["FRONTEND_URL"].split(",") : []),
+]
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([
+    ...configuredOrigins,
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://192.168.90.113:8080",
+    "https://testing.oxigen.com.pk"
+  ])
+);
+
+const isAllowedOrigin = (origin: string | undefined) => {
+  if (!origin) return true;
+  return allowedOrigins.includes(origin);
+};
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      if (!origin || isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
@@ -136,9 +166,10 @@ app.get("/api/csrf-token", (req: Request, res: Response) => {
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (
     req.method === "GET" ||
-    req.path.startsWith("/api/auth/") ||
-    req.path.startsWith("/api/webhooks") ||
-    req.path === "/health"
+    req.path === "/health" ||
+    req.path.startsWith("/api/auth/login") ||
+    req.path.startsWith("/api/auth/signup") ||
+    req.path.startsWith("/api/webhooks")
   ) {
     next();
     return;
@@ -149,8 +180,35 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // 6. General Rate Limiting
 app.use(rateLimitMiddleware);
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const frontendDistPath = resolve(__dirname, "../..", "frontend", "dist");
+const frontendIndexPath = resolve(frontendDistPath, "index.html");
+const hasFrontendDist = existsSync(frontendDistPath) && existsSync(frontendIndexPath);
+// Serve frontend when explicitly enabled, or by default in production when the
+// built `frontend/dist` is present. This helps avoid accidental 404s when the
+// process environment isn't wired but the static build exists.
+const serveFrontend = (process.env["SERVE_FRONTEND"] === "true") || (process.env["NODE_ENV"] === "production" && hasFrontendDist);
+
+if (serveFrontend && hasFrontendDist) {
+  app.use(express.static(frontendDistPath, { index: false }));
+}
+// Log what the server decided for serving the frontend (useful for debugging)
+logger.info({ serveFrontend, hasFrontendDist, frontendDistPath }, "frontend: serve status");
+logger.info({ rawServeEnv: process.env["SERVE_FRONTEND"], nodeEnv: process.env["NODE_ENV"] }, "frontend: env debug");
+
 // ====================== ROUTES ======================
 app.use("/api", router);
+
+if (serveFrontend && hasFrontendDist) {
+  app.get("/*", (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/health")) {
+      next();
+      return;
+    }
+    res.sendFile(frontendIndexPath);
+  });
+}
 
 // ====================== HEALTH CHECK ======================
 app.get("/health", (_req: Request, res: Response) => {
