@@ -1,5 +1,5 @@
-import { erpFetch, getErpUrl, getErpHeaders, parseErpError } from "../lib/erpnext-client";
-import { logger } from "../lib/logger";
+import { erpFetch, getErpUrl, getErpHeaders, parseErpError } from "../lib/erpnext-client.js";
+import { logger } from "../lib/logger.js";
 
 /**
  * FrappeService — centralized low-level operations against Frappe ERPNext.
@@ -96,11 +96,15 @@ export const frappeService = {
       links: [{ link_doctype: "Customer", link_name: customerName }],
     };
 
-    await erpFetch(getErpUrl("/api/resource/Contact"), {
-      method: "POST",
-      headers: getErpHeaders(),
-      body: JSON.stringify(contactPayload),
-    }).catch(() => {});
+    try {
+      await erpFetch(getErpUrl("/api/resource/Contact"), {
+        method: "POST",
+        headers: getErpHeaders(),
+        body: JSON.stringify(contactPayload),
+      });
+    } catch (err) {
+      logger.error({ err }, "[frappeService.createCustomerForEmail] failed to create contact");
+    }
 
     return customerName;
   },
@@ -164,7 +168,9 @@ export const frappeService = {
           }
         }
       }
-    } catch { /* proceed without links */ }
+    } catch (err) {
+      logger.warn({ err }, "[frappeService.createAddress] contact link lookup failed, proceeding without links");
+    }
 
     const safeBody = { ...body, owner: email, email_id: email, ...(links.length > 0 ? { links } : {}) };
 
@@ -354,6 +360,12 @@ export const frappeService = {
     return { data: data.data };
   },
 
+  // async uploadProfileImage(email: string, filename: string, buffer: Buffer) {
+  //   // This operation is currently unimplemented in the ERPNext integration.
+  //   // If frontend profile image upload support is added, implement it here.
+  //   return { error: "Profile image upload is not available." };
+  // },
+
   // ── Change Password ──────────────────────────────────────────────────────────
 
   async changePassword(email: string, oldPassword: string, newPassword: string) {
@@ -367,5 +379,58 @@ export const frappeService = {
       return { error: parseErpError(err) || err.message || "Failed to change password." };
     }
     return { message: "Password updated successfully." };
+  },
+
+  async uploadProfileImage(email: string, filename: string, fileBuffer: Buffer): Promise<{ error?: string; status?: number; data?: { image: string } }> {
+    const customerName = await this.findCustomerByEmail(email);
+    if (!customerName) return { error: "Customer not found.", status: 404 };
+
+    const formData = new FormData();
+    const fileBlob = new Blob([new Uint8Array(fileBuffer)]);
+    formData.append("file", fileBlob, filename);
+    formData.append("doctype", "Customer");
+    formData.append("docname", customerName);
+    formData.append("is_private", "0");
+    formData.append("folder", "Home/Attachments");
+
+    const headers = getErpHeaders();
+    delete headers["Content-Type"];
+
+    const res = await erpFetch(getErpUrl("/api/method/upload_file"), {
+      method: "POST",
+      headers,
+      body: formData as any,
+    });
+
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { _server_messages?: string };
+      return { error: parseErpError(err) || "Failed to upload profile image." };
+    }
+
+    const json = (await res.json()) as { message?: { file_url?: string } };
+    const fileUrl = json.message?.file_url;
+    if (!fileUrl) {
+      return { error: "Failed to upload profile image: No file URL returned." };
+    }
+
+    // Update Customer profile
+    const updateRes = await this.updateCustomerProfile(email, { image: fileUrl });
+    if (updateRes.error) {
+      return updateRes;
+    }
+
+    // Try to sync with User document as well
+    try {
+      await erpFetch(getErpUrl(`/api/resource/User/${encodeURIComponent(email)}`), {
+        method: "PUT",
+        headers: getErpHeaders(),
+        body: JSON.stringify({ user_image: fileUrl }),
+      });
+    } catch (err) {
+      // Non-fatal fallback — log but keep the uploaded image result
+      logger.warn({ err }, "[frappeService.uploadProfileImage] failed to sync user_image to User doc");
+    }
+
+    return { data: { image: fileUrl } };
   },
 };
