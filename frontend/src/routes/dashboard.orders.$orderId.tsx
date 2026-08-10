@@ -11,7 +11,7 @@ import {
 import { formatPKR, catalog } from "@/lib/site-data";
 import { toast } from "sonner";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+import { API_BASE } from "@/lib/api";
 
 const parseAddressDisplay = (display: string, defaultName = "Customer Address") => {
   if (!display) {
