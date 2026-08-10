@@ -11,7 +11,7 @@ export const Route = createFileRoute("/dashboard/tracking")({
   component: TrackingPage,
 });
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+import { API_BASE } from "@/lib/api";
 
 const parseAddressDisplay = (display: string, defaultName = "Customer Address") => {
   if (!display) {
