@@ -89,7 +89,7 @@ export function parseErpError(errData: { _server_messages?: string }): string {
 // Re-exports for backward compatibility — callers migrating to frappeService
 // should use the service instead of these raw functions.
 // ---------------------------------------------------------------------------
-import { frappeService } from "../services/frappe.service";
+import { frappeService } from "../services/frappe.service.js";
 
 export const findCustomerByEmail = (email: string) => frappeService.findCustomerByEmail(email);
 export const createCustomerForEmail = (email: string, fullName: string) =>
