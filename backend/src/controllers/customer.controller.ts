@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { customerService } from "../services/customer.service";
-import { assertOwner } from "../middlewares/requireAuth";
+import { customerService } from "../services/customer.service.js";
+import { assertOwner } from "../middlewares/requireAuth.js";
 
 /**
  * CustomerController — thin request/response glue for customer routes.
