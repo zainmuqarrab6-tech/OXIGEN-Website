@@ -1,6 +1,6 @@
-import { logger } from "../lib/logger";
+import { logger } from "../lib/logger.js";
 import type { Request, Response, NextFunction } from "express";
-import { getErpUrl, erpFetch} from "../lib/erpnext-client";
+import { getErpUrl, erpFetch} from "../lib/erpnext-client.js";
 
 // Add loggedInEmail field to the Express Request type
 declare global {
