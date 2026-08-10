@@ -36,7 +36,6 @@ function SecurityPage() {
             }
 
             try {
-              const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
               const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: "include" }).then(r => r.json());
               const csrfToken = csrfRes.csrfToken;
 
