@@ -1,4 +1,4 @@
-import { sendMail } from "../lib/mailer";
+import { sendMail } from "../lib/mailer.js";
 
 /**
  * EmailService — centralized logic for building and sending auth emails.
