@@ -88,6 +88,14 @@ Make sure you have [Node.js](https://nodejs.org/) (v18+) installed.
    cp .env.example .env
    ```
 3. Update the values in `.env` with your ERPNext credentials, database tokens, and secret keys. (This file is ignored by Git to keep credentials secure).
+4. For production hosting on `testing.oxigen.com.pk`, set:
+   ```text
+   NODE_ENV=production
+   PORT=8080
+   FRONTEND_URL=https://testing.oxigen.com.pk
+   FRONTEND_ORIGIN=https://testing.oxigen.com.pk
+   SERVE_FRONTEND=true
+   ```
 
 ### Frontend Setup
 1. Navigate to the `frontend/` directory.
@@ -95,6 +103,10 @@ Make sure you have [Node.js](https://nodejs.org/) (v18+) installed.
 3. Set any required Vite-specific environment variables:
    ```text
    VITE_API_URL=http://localhost:3000
+   ```
+4. For production builds targeting the same domain as the backend, create `frontend/.env.production` with:
+   ```text
+   VITE_API_URL=/api
    ```
 
 ---
