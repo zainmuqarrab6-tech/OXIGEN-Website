@@ -1,10 +1,29 @@
 import type { Request, Response } from "express";
-import { authService } from "../services/auth.service";
-import { logger } from "../lib/logger";
-import { frappeService } from "../services/frappe.service";
-import { authTokenService } from "../services/auth-token.service";
-import emailService from "../services/email.service";
-import { sendMail } from "../lib/mailer";
+import { authService } from "../services/auth.service.js";
+import { logger } from "../lib/logger.js";
+import { frappeService } from "../services/frappe.service.js";
+import { authTokenService } from "../services/auth-token.service.js";
+import emailService from "../services/email.service.js";
+import { sendMail } from "../lib/mailer.js";
+import { enqueueSignup } from "../lib/order-queue.js";
+import { pingErpNext } from "../lib/erpnext-client.js";
+import { createHash } from "crypto";
+
+/**
+ * Redact sensitive fields before logging request bodies / user objects.
+ * Never emit passwords, tokens, or API secrets to any log stream.
+ */
+const SENSITIVE_FIELD_PATTERN = /password|passwd|pwd|token|secret|apikey|api_key|authorization|cookie/i;
+
+function redactForLog<T extends Record<string, unknown>>(obj: T | undefined): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj ?? {}).map(([key, value]) =>
+      SENSITIVE_FIELD_PATTERN.test(key)
+        ? [key, "[REDACTED]"]
+        : [key, value]
+    ),
+  );
+}
 
 /**
  * AuthController — handles HTTP request/response for auth routes.
@@ -35,7 +54,38 @@ export const authController = {
       return;
     }
 
+    const fullName = [first_name, last_name].filter(Boolean).join(" ");
+
     try {
+      // 0) If ERPNext is unreachable, don't block the customer — queue the
+      // signup and complete it (Frappe user + password-set email) once ERPNext
+      // is back online.
+      if (!(await pingErpNext())) {
+        const idempotencyKey = createHash("sha256")
+          .update(`signup:${email}`)
+          .digest("hex");
+        try {
+          enqueueSignup(idempotencyKey, {
+            email,
+            firstName: first_name,
+            ...(last_name ? { lastName: last_name } : {}),
+            ...(mobile_no ? { mobileNo: mobile_no } : {}),
+            fullName,
+          });
+          logger.info({ email }, "[auth/signup] ERPNext offline — signup queued");
+          res.json({
+            success: true,
+            queued: true,
+            message: "Account creation is in progress. You will receive an email to set your password shortly.",
+          });
+          return;
+        } catch (queueErr) {
+          logger.error({ err: queueErr }, "[auth/signup] failed to enqueue signup while ERPNext offline");
+          res.status(503).json({ error: "Service temporarily unavailable. Please try again in a few minutes." });
+          return;
+        }
+      }
+
       // 1) Check if user already exists
       const exists = await authService.userExists(email);
       if (exists) {
@@ -51,7 +101,6 @@ export const authController = {
       }
 
       // 3) Create Customer + Contact
-      const fullName = [first_name, last_name].filter(Boolean).join(" ");
       const customerName = await frappeService.createCustomerForEmail(email, fullName);
       if (!customerName) {
         logger.warn({ email }, "[auth/signup] Customer auto-creation failed, will be created on first order");
@@ -73,7 +122,11 @@ export const authController = {
       } catch (mailErr) {
         // Email failed — rollback user and customer creation
         authTokenService.deleteToken(rawToken);
-        authService.deleteUser(email).catch(() => {});
+        try {
+          await authService.deleteUser(email);
+        } catch (delErr) {
+          logger.error({ err: delErr }, "[auth/signup] rollback: failed to delete user");
+        }
         logger.error({ err: mailErr }, "[auth/signup] email failed, rolled back user");
         res.status(500).json({ error: "Signup failed: confirmation email could not be sent. Please try again." });
         return;
@@ -81,6 +134,7 @@ export const authController = {
 
       res.json({
         success: true,
+        queued: false,
         message: "Signup successful. Please check your email to set your password.",
       });
     } catch (err) {
@@ -168,7 +222,7 @@ export const authController = {
   // ── POST /api/auth/set-password ─────────────────────────────────────────────
 
   async setPassword(req: Request, res: Response): Promise<void> {
-    logger.info({ body: req.body }, "[authController.setPassword] Route hit");
+    logger.info({ body: redactForLog(req.body) }, "[authController.setPassword] Route hit");
     const { token, email, password } = req.body as {
       token?: string;
       email?: string;
@@ -272,13 +326,13 @@ export const authController = {
       }
 
       const frontendUrl = (process.env["FRONTEND_URL"] ?? "http://localhost:5173").replace(/\/$/, "");
-      const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+      const setPasswordUrl = `${frontendUrl}/set-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
       let fullName = email.split("@")[0];
       const name = await authService.getUserFullName(email);
       if (name) fullName = name;
 
-      void emailService.sendResetPasswordEmail(email, fullName, resetUrl);
+      void emailService.sendSetPasswordEmail(email, fullName, setPasswordUrl);
 
       res.json(genericResponse);
     } catch (err) {
@@ -307,7 +361,10 @@ export const authController = {
     }
 
     // Verify the token
-    if (!authTokenService.verifyToken(token, email)) {
+    logger.info({ email, token }, "[authController.resetPassword] Verifying token");
+    const isTokenValid = authTokenService.verifyToken(token, email);
+    if (!isTokenValid) {
+      logger.warn({ email }, "[authController.resetPassword] Invalid or expired token");
       res.status(400).json({ error: "This link is invalid or has expired. Please request a new one." });
       return;
     }
