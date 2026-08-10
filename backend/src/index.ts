@@ -27,10 +27,10 @@ for (const env of requiredEnv) {
   }
 }
 
-import app from "./app";
-import { logger } from "./lib/logger";
-import { verifyMailer } from "./lib/mailer";
-import { startQueueProcessor, stopQueueProcessor } from "./lib/order-queue";
+const { default: app } = await import("./app.js");
+const { logger } = await import("./lib/logger.js");
+const { verifyMailer } = await import("./lib/mailer.js");
+const { startQueueProcessor, stopQueueProcessor } = await import("./lib/order-queue.js");
 
 const rawPort = process.env["PORT"];
 const port = Number(rawPort);
