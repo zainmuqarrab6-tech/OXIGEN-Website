@@ -1,11 +1,71 @@
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Link } from "@tanstack/react-router";
 import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { formatPKR } from "@/lib/site-data";
 
+const FOCUSABLE_SELECTOR =
+  'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/** All focusable, visible, enabled elements within a container. */
+function getFocusables(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => !el.hasAttribute("disabled") && el.offsetParent !== null,
+  );
+}
+
 export function CartDrawer() {
   const { drawerOpen, setDrawerOpen, cartItems, subtotal, setQty, removeFromCart } = useStore();
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+
+  // Trap focus inside the drawer while it is open, and restore focus to the
+  // element that opened it when it closes.
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    const drawer = drawerRef.current;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : document.body;
+
+    // Move focus into the drawer (first focusable element, i.e. the close button).
+    if (drawer) {
+      const focusables = getFocusables(drawer);
+      focusables[0]?.focus();
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !drawer) return;
+
+      const focusables = getFocusables(drawer);
+      if (focusables.length === 0) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      // Focus has escaped the drawer (e.g. it is on <body>): pull it back in.
+      if (!drawer.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+        return;
+      }
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused.focus?.();
+    };
+  }, [drawerOpen]);
 
   return (
     <AnimatePresence>
@@ -19,6 +79,7 @@ export function CartDrawer() {
             className="fixed inset-0 z-[80] bg-ink/40 backdrop-blur-sm"
           />
           <motion.aside
+            ref={drawerRef}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
