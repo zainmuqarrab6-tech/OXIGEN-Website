@@ -6,6 +6,7 @@ import {
   Plus,
   Heart,
   ShoppingCart,
+  MessageCircle,
   Truck,
   ShieldCheck,
   RotateCcw,
@@ -17,7 +18,19 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Reveal } from "@/components/site/Reveal";
 import { useStore } from "@/lib/store";
-import { getProduct, catalog, formatPKR, slugify, getProductReviews, getReviewStats } from "@/lib/site-data";
+import { getProduct, catalog, formatPKR, slugify, getProductReviews, getReviewStats, brand } from "@/lib/site-data";
+
+/**
+ * Build a wa.me deep-link that pre-fills a WhatsApp order message for a product.
+ * Falls back to the generic brand link if no product is passed.
+ */
+function orderOnWhatsAppUrl(name?: string, price?: number, qty = 1): string {
+  const base = "https://wa.me/+923307069091?text=";
+  const msg = name
+    ? `Hi%20OxiGen%2C%20I%27d%20like%20to%20order%3A%0A%0A%F0%9F%9B%92%20${encodeURIComponent(name)}${price ? `%20%E2%80%94%20${encodeURIComponent(formatPKR(price))}` : ""}%0A%F0%9F%94%A2%20Qty%3A%20${qty}%0A%0APlease%20share%20delivery%20details.%20Thank%20you!`
+    : brand.whatsapp.split("?text=")[1] ?? "";
+  return `${base}${msg}`;
+}
 
 function Stars({ rating, className = "h-4 w-4" }: { rating: number; className?: string }) {
   return (
@@ -148,7 +161,9 @@ export const Route = createFileRoute("/product/$slug")({
               ) || [],
               highlights: [],
               ingredients: (d.web_long_description as string) || "",
-              available: ((d.custom_stock_qty as number) || 0) > 0,
+              // null/undefined stock = stock not tracked → assume available.
+              // Only an explicit 0 marks the product as unavailable.
+              available: (d.custom_stock_qty as number | null | undefined) !== 0,
             };
             return { product: normalized, fromAPI: true };
           }
@@ -225,13 +240,17 @@ export const Route = createFileRoute("/product/$slug")({
 
 function ProductPage() {
   const { product } = Route.useLoaderData();
-  const { addToCart, toggleWishlist, inWishlist, setDrawerOpen } = useStore();
+  const { addToCart, toggleWishlist, inWishlist, setDrawerOpen, apiCatalog } = useStore();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
 
   const saved = inWishlist(product.slug);
-  const related = catalog.filter((prod) => prod.slug !== product.slug).slice(0, 3);
+  // "You may also like" — pull from Frappe Website Items via API first;
+  // fall back to the static catalog only if no API products have loaded.
+  const related = (apiCatalog.length > 0 ? apiCatalog : catalog)
+    .filter((prod) => prod.slug !== product.slug)
+    .slice(0, 3);
   const gallery = product.gallery?.length ? product.gallery : [product.img];
   const reviews = getProductReviews(product.slug);
   const { total: reviewCount, avg: avgRating } = getReviewStats(reviews);
@@ -318,7 +337,14 @@ function ProductPage() {
                     )}
                   </>
                 ) : (
-                  <span className="text-2xl font-extrabold text-ink">Coming Soon</span>
+                  <>
+                    <span className="text-3xl font-extrabold text-ink">
+                      {formatPKR(product.price)}
+                    </span>
+                    <span className="text-sm font-medium text-emerald">
+                      Available on WhatsApp
+                    </span>
+                  </>
                 )}
               </div>
 
@@ -373,8 +399,7 @@ function ProductPage() {
                   disabled={!product.available}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <ShoppingCart className="h-4 w-4" />{" "}
-                  {product.available ? "Add to Cart" : "Coming Soon"}
+                  <ShoppingCart className="h-4 w-4" /> Add to Cart
                 </button>
                 <button
                   onClick={buyNow}
@@ -391,6 +416,14 @@ function ProductPage() {
                   <Heart className={`h-5 w-5 ${saved ? "fill-primary" : ""}`} />
                 </button>
               </div>
+              <a
+                href={orderOnWhatsAppUrl(product.name, product.price, qty)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald to-accent px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald/20 transition-transform hover:scale-[1.02]"
+              >
+                <MessageCircle className="h-4 w-4" /> Order on WhatsApp
+              </a>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 {[
