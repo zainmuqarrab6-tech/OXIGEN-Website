@@ -1,7 +1,7 @@
-import { logger } from "../lib/logger";
+import { logger } from "../lib/logger.js";
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { requireAuth } from "../middlewares/requireAuth";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireAuth } from "../middlewares/requireAuth.js";
+import { requireAdmin } from "../middlewares/requireAdmin.js";
 import {
   getQueueStats,
   getCircuitState,
@@ -12,8 +12,8 @@ import {
   clearPendingQueue,
   clearDlq,
   clearCompleted,
-} from "../lib/order-queue";
-import { pingErpNext, getErpUrl, getErpHeaders, erpFetch} from "../lib/erpnext-client";
+} from "../lib/order-queue.js";
+import { pingErpNext, getErpUrl, getErpHeaders, erpFetch} from "../lib/erpnext-client.js";
 
 // Middleware to add Request ID to response if missing (for debugging)
 const attachRequestId = (req: Request, res: Response, next: NextFunction) => {
