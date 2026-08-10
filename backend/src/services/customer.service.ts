@@ -1,5 +1,5 @@
-import { erpFetch, getErpUrl, getErpHeaders, parseErpError, findCustomerByEmail } from "../lib/erpnext-client";
-import { logger } from "../lib/logger";
+import { erpFetch, getErpUrl, getErpHeaders, parseErpError, findCustomerByEmail } from "../lib/erpnext-client.js";
+import { logger } from "../lib/logger.js";
 
 /**
  * CustomerService — Frappe operations for customer-specific data:
