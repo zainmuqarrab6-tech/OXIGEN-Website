@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { authController } from "../controllers/auth.controller";
-import { createRateLimiter } from "../middlewares/rate-limit";
-import { validate, signupSchema, loginSchema, setPasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../lib/validation";
+import { authController } from "../controllers/auth.controller.js";
+import { createRateLimiter } from "../middlewares/rate-limit.js";
+import { validate, signupSchema, loginSchema, setPasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../lib/validation.js";
 
 const router: IRouter = Router();
 const signupLimiter = createRateLimiter("signup");
