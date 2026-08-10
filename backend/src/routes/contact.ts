@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 
-import { logger } from "../lib/logger";
-import { erpFetch, getErpUrl, getErpHeaders, parseErpError } from "../lib/erpnext-client";
-import { validate, contactSchema } from "../lib/validation";
-import { createRateLimiter } from "../middlewares/rate-limit";
+import { logger } from "../lib/logger.js";
+import { erpFetch, getErpUrl, getErpHeaders, parseErpError } from "../lib/erpnext-client.js";
+import { validate, contactSchema } from "../lib/validation.js";
+import { createRateLimiter } from "../middlewares/rate-limit.js";
 
 const router: IRouter = Router();
 
