@@ -13,7 +13,7 @@ export const brand = {
   name: "OxiGen",
   tagline: "Pakistan's No.1 Vitamin Brand",
   promo: "30% OFF + FREE SHIPPING — TODAY ONLY",
-  email: "oxiglo555@gmail.com",
+  email: "info@oxigen.pk",
   phone: "+92 330 7069091",
   phoneHref: "tel:+923307069091",
   location: "Pakistan",
@@ -43,62 +43,32 @@ export const nav = [
 
 export const categories = [
   {
-    title: "Multivitamins",
-    desc: "Daily foundational nutrition & immunity support.",
-    img: getOptimizedShopifyUrl(
-      `${CDN}/Glutathione_Supplement_for_Glowing_Skin_in_Pakistan_L-Glutathione_750mg.png?v=1780691324`,
-      500,
-    ),
-    href: "/shop",
-  },
-  {
     title: "Women's Health",
-    desc: "Hormonal balance & wellness for women.",
-    img: getOptimizedShopifyUrl(`${CDN}/WhatsAppImage2025-04-28at5.41.05PM.jpg?v=1747318003`, 500),
-    href: "/shop",
+    desc: "Hormonal balance, PCOS care & everyday female vitality.",
+    img: "/products/nutricept-new-packaging.jpeg",
+    href: "/product/nutri-cept-women-s-wellness",
   },
   {
-    title: "Men's Health",
-    desc: "Energy, vitality & everyday performance.",
-    img: getOptimizedShopifyUrl(`${CDN}/oxigen_oxglo_supplements.jpg?v=1780692094`, 500),
-    href: "/shop",
+    title: "Brain & Focus",
+    desc: "Laser focus, mental clarity, calm & natural motivation.",
+    img: "/products/oxidop-new-packaging.jpeg",
+    href: "/product/oxidop-focus-dopamine-support",
   },
   {
-    title: "Brain Health",
-    desc: "Focus, mental clarity, calm & motivation.",
-    img: getOptimizedShopifyUrl(
-      `${CDN}/Focus_Dopamine_Support_Tablets_Mental_Clarity_Calm_Motivation_Supplement.webp?v=1781878798`,
-      500,
-    ),
-    href: "/shop",
+    title: "PCOS Wellness",
+    desc: "Inositol synergy, cycle regularity & reproductive health.",
+    img: "/products/nutricept-new-packaging.jpeg",
+    href: "/product/nutri-cept-women-s-wellness",
+  },
+  {
+    title: "Cognitive Performance",
+    desc: "Dopamine support, calm resilience & memory function.",
+    img: "/products/oxidop-new-packaging.jpeg",
+    href: "/product/oxidop-focus-dopamine-support",
   },
 ];
 
 export const products = [
-  {
-    name: "OxiGlo — L-Glutathione 750mg",
-    subtitle: "Glutathione Supplement for Glowing Skin",
-    desc: "OxiGlo Glutathione 750mg is an advanced skin-wellness supplement designed to promote a radiant glow, brighter-looking skin and overall beauty from within. Formulated with powerful antioxidants — Glutathione, Vitamin C, Alpha Lipoic Acid & Milk Thistle — to help reduce dullness, uneven tone and dark spots while supporting natural detoxification, liver wellness and daily immunity.",
-    price: "Rs.4,500",
-    was: "Rs.6,000",
-    tag: "Best Seller",
-    img: `${CDN}/Glutathione_Supplement_for_Glowing_Skin_in_Pakistan_L-Glutathione_750mg.png?v=1780691324&width=800`,
-    gallery: [
-      `${CDN}/Glutathione_Supplement_for_Glowing_Skin_in_Pakistan_L-Glutathione_750mg.png?v=1780691324&width=800`,
-      `${CDN}/oxiglo.jpg?v=1780692026&width=800`,
-      `${CDN}/oxigen_oxglo_supplements.jpg?v=1780692094&width=800`,
-      `${CDN}/1E9A2804copy_080139.jpg?v=1760262820&width=800`,
-    ],
-    highlights: [
-      "Promotes radiant glow & brighter-looking skin",
-      "Antioxidants reduce dullness, uneven tone & dark spots",
-      "Supports natural detox & liver wellness",
-      "Boosts immunity and healthy skin repair",
-    ],
-    ingredients:
-      "L-Glutathione 750mg, Vitamin C 100mg, Alpha Lipoic Acid 100mg, Milk Thistle 50mg, Vitamin D3 500iu, Vitamin B6 5mg, Zinc Sulphate 7.5mg",
-    href: "/product/oxiglo-l-glutathione-750mg",
-  },
   {
     name: "Nutri-Cept — Women's Wellness",
     subtitle: "PCOS & Hormonal Balance Supplement",
@@ -106,12 +76,12 @@ export const products = [
     price: "Rs.1,600",
     was: "Rs.2,000",
     tag: "Women's Favourite",
-    img: `${CDN}/WhatsAppImage2025-04-28at5.41.05PM.jpg?v=1747318003&width=800`,
+    img: "/products/nutricept-new-packaging.jpeg",
     gallery: [
+      "/products/nutricept-new-packaging.jpeg",
       `${CDN}/WhatsAppImage2025-04-28at5.41.05PM.jpg?v=1747318003&width=800`,
       `${CDN}/image_123650291_11.jpg?v=1755887629&width=800`,
       `${CDN}/image_123650291_7.jpg?v=1755887629&width=800`,
-      `${CDN}/image_123650291_12.jpg?v=1755887629&width=800`,
     ],
     highlights: [
       "Supports hormonal balance & PCOS wellness",
@@ -129,12 +99,12 @@ export const products = [
     desc: "Stay focused, motivated and mentally balanced with OxiDop — an advanced calm-focus supplement designed to support productivity without the jitters. Formulated with L-Tyrosine, L-Theanine, GABA, Rhodiola Rosea, Magnesium Glycinate, Vitamin D3, Vitamin B6 & Zinc to support healthy dopamine production, mental clarity, stress resilience and relaxation — ideal for students, professionals and anyone facing mental fatigue.",
     price: "Rs.4,500",
     was: "Rs.6,000",
-    tag: "New",
-    img: `${CDN}/Focus_Dopamine_Support_Tablets_Mental_Clarity_Calm_Motivation_Supplement.webp?v=1781878798&width=800`,
+    tag: "New Launch",
+    img: "/products/oxidop-new-packaging.jpeg",
     gallery: [
+      "/products/oxidop-new-packaging.jpeg",
       `${CDN}/Focus_Dopamine_Support_Tablets_Mental_Clarity_Calm_Motivation_Supplement.webp?v=1781878798&width=800`,
       `${CDN}/ChatGPTImageJun11_2026_11_21_36PM.png?v=1781202993&width=800`,
-      `${CDN}/ChatGPT_Image_Jun_11_2026_11_15_57_PM.png?v=1781203015&width=800`,
       `${CDN}/OXIDOP_Focus_Dopamine_Support_Tablets_Mental_Clarity_Calm_Motivation_Supplement.webp?v=1781558572&width=800`,
     ],
     highlights: [
@@ -168,32 +138,32 @@ export const testimonials = [
   {
     name: "Shaista",
     date: "01/02/2025",
-    title: "Best Product to Trust On",
-    text: "OxiGlo ne meri skin ko kaafi bright aur healthy banaya hai. 750mg Glutathione se energy bhi improve hui aur immunity kaafi strong feel ho rahi hai. Yeh product try karna chahiye!",
+    title: "Best Product for PCOS & Energy",
+    text: "Nutri-Cept ne meri cycle aur energy ko kaafi improve kiya hai. PCOS symptoms mein kaafi relief mila aur mood bhi balance feel ho raha hai. Highly recommended!",
   },
   {
     name: "Farukh",
     date: "01/02/2025",
-    title: "Amazing Results",
-    text: "Main ne OXIGLO ka istemal kiya aur bilkul must results aaye hain! Mere chehre ka rang kafi bright hua hai, aur energy level bhi bohot barh gaya hai. Skin aur immunity dono ke liye faida de raha hai.",
+    title: "Amazing Mental Focus",
+    text: "Main ne OxiDop ka istemal kiya aur focus bilkul sharp ho gaya hai! Bina kisi caffeine crash ya jittery feeling ke pure din productivity bani rehti hai.",
   },
   {
     name: "Ayesha",
     date: "18/03/2025",
-    title: "Glowing Skin in Weeks",
-    text: "Sirf teen hafton mein meri skin pehle se zyada glowing aur even lag rahi hai. OxiGlo ab meri daily routine ka hissa ban gaya hai. Highly recommended!",
+    title: "Hormonal Balance in Weeks",
+    text: "Sirf teen hafton mein meri body aur routine mein positive farq mehsoos hua. Nutri-Cept ab meri daily routine ka zaroori hissa ban gaya hai.",
   },
   {
     name: "Bilal",
     date: "27/03/2025",
     title: "Energy & Focus Boost",
-    text: "Din bhar thakan mehsoos hoti thi, lekin OxiGen supplements lene ke baad energy aur focus dono behtar ho gaye. Delivery bhi fast thi across Pakistan.",
+    text: "Din bhar thakan mehsoos hoti thi, lekin OxiDop lene ke baad focus aur motivation dono behtar ho gaye. Delivery bhi fast thi across Pakistan.",
   },
   {
     name: "Hina",
     date: "05/04/2025",
-    title: "Great for Immunity",
-    text: "Mausam badalne par jaldi bimaar ho jati thi, ab immunity kaafi strong feel hoti hai. Quality product hai aur packaging bhi premium thi.",
+    title: "Great Quality & Packaging",
+    text: "Sealed packaging aur authentic formula mila. Nutri-Cept ke ingredients kaafi transparent aur effective hain.",
   },
   {
     name: "Usman",
@@ -381,3 +351,170 @@ export function getReviewStats(reviews: ProductReview[]) {
   const avg = total ? reviews.reduce((s, r) => s + r.rating, 0) / total : 0;
   return { total, avg: Math.round(avg * 10) / 10 };
 }
+
+// ---- Homepage banners (from OxiGen brand assets) ----
+export type Banner = {
+  title: string;
+  sub: string;
+  img: string;
+  href: string;
+  cta: string;
+};
+
+export type HeroBannerItem = {
+  id: string;
+  slug: string;
+  name: string;
+  badge: string;
+  category: string;
+  tagline: string;
+  sub: string;
+  desc: string;
+  img: string;
+  price: string;
+  wasPrice: string;
+  discount: string;
+  href: string;
+  cta: string;
+  theme: {
+    accentColor: string;
+    badgeBg: string;
+    badgeText: string;
+    glowColor: string;
+    gradientBorder: string;
+    bgGradient: string;
+    chipBg: string;
+  };
+  keyActives: { name: string; amount?: string; note: string }[];
+  benefits: { title: string; desc: string; icon: string }[];
+  highlights: string[];
+  packagingNotice: string;
+  whatsappMessage: string;
+};
+
+export const heroBanners: (Banner & HeroBannerItem)[] = [
+  {
+    id: "nutri-cept",
+    slug: "nutri-cept-women-s-wellness",
+    name: "Nutri-Cept®",
+    title: "Nutri-Cept Women's Wellness",
+    badge: "NEW PACKAGING • 100% ORIGINAL",
+    category: "Women's Wellness & PCOS Formula",
+    tagline: "Complete Hormonal Balance, PCOS Support & Ovulation Health",
+    sub: "Myo-Inositol, D-Chiro-Inositol, Chaste Berry & 15+ Essential Nutrients",
+    desc: "Specially formulated for women struggling with irregular cycles, PCOS symptoms, hormonal acne and low energy. A clinical-grade dual Inositol blend with essential micronutrients.",
+    img: "/products/nutricept-new-packaging.jpeg",
+    price: "Rs.1,600",
+    wasPrice: "Rs.2,000",
+    discount: "20% OFF",
+    href: "/product/nutri-cept-women-s-wellness",
+    cta: "Shop Nutri-Cept",
+    theme: {
+      accentColor: "oklch(0.65 0.22 340)",
+      badgeBg: "bg-rose-500/15 border-rose-500/30 text-rose-300",
+      badgeText: "text-rose-400",
+      glowColor: "rgba(244, 63, 94, 0.25)",
+      gradientBorder: "from-rose-500/40 via-purple-500/30 to-pink-500/40",
+      bgGradient: "from-rose-950/40 via-purple-950/30 to-background",
+      chipBg: "bg-rose-500/10 border-rose-500/20 text-rose-200",
+    },
+    keyActives: [
+      { name: "Myo + D-Chiro Inositol", amount: "50mg Total", note: "Ovarian function & cycle regularity" },
+      { name: "Chaste Berry (Vitex)", amount: "28mg", note: "Balances estrogen & progesterone" },
+      { name: "CoQ10 & Antioxidants", amount: "2.5mg", note: "Cellular energy & egg quality" },
+      { name: "Folic Acid, Iron & Zinc", amount: "15+ Vitamins", note: "Fights fatigue & hair thinning" },
+    ],
+    benefits: [
+      { title: "Cycle Regularity", desc: "Predictable, healthy menstrual cycles & ovulation", icon: "cycle" },
+      { title: "PCOS Care", desc: "Helps manage hormonal weight, cravings & acne", icon: "pcos" },
+      { title: "Hair & Skin Glow", desc: "Reduces androgenic hair thinning & skin breakouts", icon: "sparkle" },
+      { title: "Daily Female Energy", desc: "Replenishes iron and essential micronutrients", icon: "energy" },
+    ],
+    highlights: ["Doctor Formulated", "15+ Micronutrients", "Free Shipping Pakistan", "Cash on Delivery"],
+    packagingNotice: "Authentic New Packaging with Enhanced Tamper-Proof Seal",
+    whatsappMessage: "Hi, I would like to order Nutri-Cept New Packaging (Rs. 1,600). Please provide more details.",
+  },
+  {
+    id: "oxidop",
+    slug: "oxidop-focus-dopamine-support",
+    name: "OxiDop®",
+    title: "OxiDop Focus & Dopamine Support",
+    badge: "NEW PACKAGING • ADVANCED NOOTROPIC",
+    category: "Cognitive Focus & Dopamine Support",
+    tagline: "Laser Focus, Calm Mental Clarity & Natural Dopamine Drive",
+    sub: "L-Tyrosine, L-Theanine, GABA, Rhodiola Rosea & Magnesium Glycinate",
+    desc: "Pakistan's premier focus & dopamine booster. Engineered for students and professionals to eliminate brain fog, sustain motivation, and reduce stress without caffeine jitters.",
+    img: "/products/oxidop-new-packaging.jpeg",
+    price: "Rs.4,500",
+    wasPrice: "Rs.6,000",
+    discount: "25% OFF",
+    href: "/product/oxidop-focus-dopamine-support",
+    cta: "Shop OxiDop",
+    theme: {
+      accentColor: "oklch(0.72 0.14 210)",
+      badgeBg: "bg-cyan-500/15 border-cyan-500/30 text-cyan-300",
+      badgeText: "text-cyan-400",
+      glowColor: "rgba(6, 182, 212, 0.25)",
+      gradientBorder: "from-cyan-500/40 via-blue-500/30 to-indigo-500/40",
+      bgGradient: "from-cyan-950/40 via-blue-950/30 to-background",
+      chipBg: "bg-cyan-500/10 border-cyan-500/20 text-cyan-200",
+    },
+    keyActives: [
+      { name: "L-Tyrosine", amount: "Dopamine Precursor", note: "Fuels drive, motivation & mental alertness" },
+      { name: "L-Theanine + GABA", amount: "Alpha Brainwaves", note: "Promotes calm focus with zero drowsiness" },
+      { name: "Rhodiola Rosea", amount: "Pure Adaptogen", note: "Protects against cognitive fatigue & burnout" },
+      { name: "Magnesium Glycinate + Zinc", amount: "Neuro Synergy", note: "Restores nervous system and memory health" },
+    ],
+    benefits: [
+      { title: "Deep Flow State", desc: "Sustained concentration for work, study and high focus", icon: "brain" },
+      { title: "Natural Dopamine", desc: "Fuels willpower, task completion & mood motivation", icon: "sparkle" },
+      { title: "Zero Jitters / No Crash", desc: "Clean non-stimulant calm without palpitations", icon: "calm" },
+      { title: "Stress Resilience", desc: "Reduces burnout, anxiety and afternoon brain fatigue", icon: "shield" },
+    ],
+    highlights: ["Clean Nootropic Matrix", "Zero Caffeine Crash", "Free Shipping Pakistan", "Cash on Delivery"],
+    packagingNotice: "Authentic New Packaging with Verified Holographic Seal",
+    whatsappMessage: "Hi, I would like to order OxiDop New Packaging (Rs. 4,500). Please provide more details.",
+  },
+];
+
+export const promoBanners: (Banner & {
+  tag?: string;
+  price?: string;
+  wasPrice?: string;
+  discount?: string;
+  badgeBg?: string;
+})[] = [
+  {
+    title: "Nutri-Cept® — New 2026 Packaging",
+    sub: "Dual Inositol (50mg), Chaste Berry & 15+ Female Micronutrients for PCOS, Hormonal Balance & Ovulation.",
+    img: "/products/nutricept-new-packaging.jpeg",
+    href: "/product/nutri-cept-women-s-wellness",
+    cta: "Shop Nutri-Cept",
+    tag: "🌸 WOMEN'S HORMONAL BALANCE",
+    price: "Rs.1,600",
+    wasPrice: "Rs.2,000",
+    discount: "20% OFF",
+    badgeBg: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+  },
+  {
+    title: "OxiDop® — Laser Focus & Motivation",
+    sub: "Clean Nootropic Matrix with L-Tyrosine, Rhodiola Rosea & GABA for All-Day Productivity without Jitters.",
+    img: "/products/oxidop-new-packaging.jpeg",
+    href: "/product/oxidop-focus-dopamine-support",
+    cta: "Shop OxiDop",
+    tag: "⚡ BRAIN & DOPAMINE NOOTROPIC",
+    price: "Rs.4,500",
+    wasPrice: "Rs.6,000",
+    discount: "25% OFF",
+    badgeBg: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+  },
+];
+
+export const quickLinks = [
+  { label: "Women's Health", img: "/products/nutricept-new-packaging.jpeg", to: "/product/nutri-cept-women-s-wellness" },
+  { label: "Brain & Focus", img: "/products/oxidop-new-packaging.jpeg", to: "/product/oxidop-focus-dopamine-support" },
+  { label: "PCOS Care", img: "/products/nutricept-new-packaging.jpeg", to: "/product/nutri-cept-women-s-wellness" },
+  { label: "Dopamine Boost", img: "/products/oxidop-new-packaging.jpeg", to: "/product/oxidop-focus-dopamine-support" },
+  { label: "New Launch", img: "/products/oxidop-new-packaging.jpeg", to: "/shop" },
+  { label: "All Products", img: "/products/nutricept-new-packaging.jpeg", to: "/shop" },
+];
