@@ -23,10 +23,10 @@ export function Navbar() {
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-x-0 top-8 z-50 px-3 pt-2 sm:px-5 sm:pt-3"
+      className="fixed inset-x-0 top-2 z-50 px-2 sm:top-8 sm:px-5 sm:pt-3"
     >
       <nav
-        className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-3 transition-all duration-500 sm:px-6 ${
+        className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-3 py-2.5 transition-all duration-500 sm:px-6 sm:py-3 ${
           scrolled
             ? "border border-white/60 bg-white shadow-lg shadow-primary/10 backdrop-blur-xl"
             : "border border-transparent bg-white/70 backdrop-blur-md"
@@ -36,7 +36,7 @@ export function Navbar() {
           <img
             src={oxigenLogo}
             alt="OxiGen — Pakistan's No.1 Vitamin Brand"
-            className="h-8 w-auto sm:h-9"
+            className="h-7 w-auto sm:h-9"
           />
         </Link>
 
@@ -72,7 +72,7 @@ export function Navbar() {
           </Link>
 
           <Link
-            to={user ? "/dashboard" : "/signin"}
+            to={user ? "/account" : "/signin"}
             aria-label={user ? "Account" : "Sign in"}
             className="grid h-10 w-10 place-items-center rounded-xl glass text-ink transition-colors hover:text-primary"
           >
