@@ -25,7 +25,7 @@ export function Hero() {
       id="top"
       ref={ref}
       onMouseMove={onMove}
-      className="relative flex min-h-screen items-center overflow-hidden pt-40 pb-16 lg:pt-44"
+      className="relative flex min-h-screen items-center overflow-hidden pt-28 pb-12 sm:pt-36 sm:pb-16 lg:pt-44"
     >
       {/* animated background */}
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -50,7 +50,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 24, filter: "blur(10px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-6 font-display text-5xl font-extrabold leading-[1.03] tracking-tight text-ink sm:text-6xl lg:text-7xl"
+            className="mt-4 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-ink sm:mt-6 sm:text-6xl lg:text-7xl"
           >
             Premium <span className="text-gradient">Wellness</span> for Everyday Wellbeing
           </motion.h1>
@@ -108,12 +108,12 @@ export function Hero() {
           >
             <motion.div style={{ x: px, y: py }} className="relative">
               <div className="absolute inset-0 -z-10 scale-90 rounded-[2.5rem] bg-gradient-to-br from-primary/40 to-accent/40 blur-3xl" />
-              <div className="animate-float rounded-[2.5rem] glass p-6">
+              <div className="animate-float rounded-[2.5rem] glass p-4 sm:p-6">
                 <img
-                  src={products[2].img}
+                  src={products[1]?.img || "/products/oxidop-new-packaging.jpeg"}
                   alt="OxiGen OxiDop Focus & Dopamine Support supplement bottle"
                   loading="eager"
-                  className="mx-auto h-[26rem] w-auto object-contain drop-shadow-2xl"
+                  className="mx-auto h-64 w-auto object-contain drop-shadow-2xl sm:h-[26rem]"
                 />
               </div>
             </motion.div>
