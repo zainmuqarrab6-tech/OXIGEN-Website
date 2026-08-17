@@ -163,8 +163,9 @@ export class ErpAdapter {
   static async fetchWebsiteItems(options: {
     search?: string;
     limit?: string;
+    itemGroup?: string;
   }): Promise<Record<string, unknown>[]> {
-    const { search, limit = "60" } = options;
+    const { search, limit = "60", itemGroup } = options;
 
     // Actual Website Item fields (schema-verified)
     const fields = JSON.stringify([
@@ -194,6 +195,9 @@ export class ErpAdapter {
 
     if (search) {
       filters.push(["item_name", "like", `%${search}%`]);
+    }
+    if (itemGroup) {
+      filters.push(["item_group", "=", itemGroup]);
     }
 
     const params = new URLSearchParams({
