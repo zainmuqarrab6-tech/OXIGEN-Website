@@ -12,7 +12,7 @@ export type NotificationItem = {
 export const mockNotifications: NotificationItem[] = [
   { id: "n1", type: "order", title: "Order Confirmed", body: "Your order has been confirmed and is being processed.", time: "10 min ago", read: false },
   { id: "n2", type: "shipping", title: "Shipped", body: "Your order has been dispatched.", time: "1 day ago", read: false },
-  { id: "n3", type: "promo", title: "Flash Sale!", body: "30% off on OxiGlo — today only.", time: "3 days ago", read: true },
+  { id: "n3", type: "promo", title: "Flash Sale!", body: "Up to 25% off on Nutri-Cept & OxiDop — today only.", time: "3 days ago", read: true },
   { id: "n4", type: "account", title: "Welcome", body: "Welcome to OxiGen!", time: "1 week ago", read: true },
 ];
 
