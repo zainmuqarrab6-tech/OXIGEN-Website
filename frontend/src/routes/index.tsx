@@ -10,10 +10,12 @@ import {
   HeartPulse,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { Hero } from "@/components/site/Hero";
+import { BannerCarousel } from "@/components/site/BannerCarousel";
+import { QuickLinks } from "@/components/site/QuickLinks";
+import { TrendingGrid } from "@/components/site/TrendingGrid";
+import { PromoBanners } from "@/components/site/PromoBanners";
 import {
   Categories,
-  Products,
   Why,
   Results,
   Testimonials,
@@ -31,13 +33,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Shop premium OxiGen supplements — OxiGlo Glutathione for glowing skin, Nutri-Cept for women's hormonal balance, and more. Free shipping across Pakistan, quality guaranteed.",
+          "Shop premium OxiGen supplements — Nutri-Cept for women's hormonal balance & PCOS care, and OxiDop for laser focus & dopamine support. Free shipping across Pakistan, quality guaranteed.",
       },
       { property: "og:title", content: "OxiGen — Pakistan's No.1 Vitamin & Wellness Brand" },
       {
         property: "og:description",
         content:
-          "Premium nutritional supplements for immunity, skin, energy and hormonal wellness.",
+          "Premium nutritional supplements for hormonal wellness, PCOS care, focus, and natural energy.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "/" },
@@ -156,11 +158,13 @@ function Guarantees() {
 function Index() {
   return (
     <SiteLayout>
-      <Hero />
-      <Stats />
+      <BannerCarousel />
+      <QuickLinks />
       <SaleTimer />
+      <TrendingGrid />
+      <PromoBanners />
+      <Stats />
       <Categories />
-      <Products />
       <Guarantees />
       <TrustBadges />
       <Why />
