@@ -60,13 +60,18 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/items/groups`)
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+    fetch(`${apiUrl}/items/groups`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
       })
       .then((json) => {
-        setData(json.data);
+        if (Array.isArray(json?.data) && json.data.length > 0) {
+          setData(json.data);
+        } else {
+          setError(true);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -75,7 +80,7 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
       });
   }, []);
 
-  const displayCategories = error ? categories : data;
+  const displayCategories = !error && Array.isArray(data) && data.length > 0 ? data : categories;
 
   return (
     <section
@@ -100,13 +105,13 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
               <Reveal key={c.name || c.title} delay={i * 0.08}>
                 <Link
                   to="/category/$slug"
-                  params={{ slug: c.slug || slugify(c.title) }}
+                  params={{ slug: c.slug || slugify(c.title || c.name || "") }}
                   className="group relative block overflow-hidden rounded-3xl glass p-5 transition-all duration-500 hover:-translate-y-2"
                 >
                   <div className="relative mb-5 aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-secondary to-white">
                     {(c.img || c.image) && (
                       <img
-                        src={c.img || (c.image?.startsWith("/") ? `${import.meta.env.VITE_API_URL}/items/image${c.image}` : c.image)}
+                        src={c.img || (c.image?.startsWith("/") ? `${import.meta.env.VITE_API_URL || "http://localhost:3001/api"}/items/image${c.image}` : c.image)}
                         alt={`${c.name || c.title} supplements`}
                         loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
@@ -137,13 +142,18 @@ export function Products() {
   const { addToCart, toggleWishlist, inWishlist } = useStore();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/items?limit=3`)
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+    fetch(`${apiUrl}/items?limit=3`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
       })
       .then((json) => {
-        setData(json.data || []);
+        if (Array.isArray(json?.data) && json.data.length > 0) {
+          setData(json.data);
+        } else {
+          setError(true);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -152,7 +162,7 @@ export function Products() {
       });
   }, []);
 
-  const displayProducts = error ? products : data;
+  const displayProducts = !error && Array.isArray(data) && data.length > 0 ? data : products;
 
   return (
     <section id="products" className="relative overflow-hidden py-24">
@@ -266,8 +276,8 @@ export function Mission() {
         <Reveal>
           <div className="relative overflow-hidden rounded-[2.5rem] glass p-3">
             <img
-              src={`${CDN}/Why_OxiGlo_L-Glutathione_Is_A_Popular_Choice_In_Pakistan.webp?v=1780668630&width=1400`}
-              alt="Why OxiGlo L-Glutathione is a popular choice in Pakistan"
+              src="/banners/banner-nutricept.jpg"
+              alt="OxiGen Premium Nutritional Supplements Pakistan"
               loading="lazy"
               className="h-full w-full rounded-[2rem] object-cover"
             />
@@ -500,7 +510,7 @@ export function Contact() {
   return (
     <section id="contact" className="mx-auto max-w-6xl px-5 py-24">
       <Reveal>
-        <div className="relative overflow-hidden rounded-[2.5rem] glass p-8 sm:p-14">
+        <div className="relative overflow-hidden rounded-[2.5rem] glass p-6 sm:p-14">
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
           <div className="relative grid gap-10 lg:grid-cols-2">
