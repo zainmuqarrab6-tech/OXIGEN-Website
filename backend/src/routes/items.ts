@@ -13,14 +13,15 @@ router.get("/items/version", (_req, res) => {
 // ─── GET /api/items ───────────────────────────────────────────────────────────
 router.get("/items", async (req, res) => {
   try {
-    const { search, limit = "60", _t } = req.query as {
+    const { search, limit = "60", item_group, _t } = req.query as {
       search?: string;
       limit?: string;
+      item_group?: string;
       _t?: string;
     };
 
     const bustCache = Boolean(_t);
-    const cacheKey = `website_items:${search ?? ""}:${limit}`;
+    const cacheKey = `website_items:${search ?? ""}:${limit}:${item_group ?? ""}`;
     const cached = !bustCache && itemCache.get(cacheKey);
 
     if (cached) {
@@ -31,7 +32,7 @@ router.get("/items", async (req, res) => {
       return;
     }
 
-    const normalized = await ErpAdapter.fetchWebsiteItems({ search, limit });
+    const normalized = await ErpAdapter.fetchWebsiteItems({ search, limit, itemGroup: item_group });
 
     itemCache.set(cacheKey, normalized);
 
