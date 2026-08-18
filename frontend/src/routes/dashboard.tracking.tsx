@@ -73,16 +73,15 @@ const buildTimeline = (status: string, date: string) => {
 
 function TrackingPage() {
   const { orders } = useStore();
-  const activeOrders = orders.filter((o) => o.status !== "Cancelled");
-  const [selectedId, setSelectedId] = useState(activeOrders[0]?.id || orders[0]?.id || "");
+  const [selectedId, setSelectedId] = useState(orders[0]?.id || "");
   const [orderData, setOrderData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (orders.length > 0 && !selectedId) {
-      setSelectedId(activeOrders[0]?.id || orders[0]?.id);
+      setSelectedId(orders[0]?.id);
     }
-  }, [orders, selectedId, activeOrders]);
+  }, [orders, selectedId]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -153,7 +152,9 @@ function TrackingPage() {
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 selectedId === o.id
                   ? "bg-gradient-to-r from-primary to-accent text-white"
-                  : "bg-white/70 text-ink hover:bg-white"
+                  : o.status === "Cancelled"
+                    ? "bg-destructive/20 text-destructive line-through"
+                    : "bg-white/70 text-ink hover:bg-white"
               }`}
             >
               {o.id}
