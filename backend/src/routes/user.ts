@@ -272,8 +272,34 @@ router.get("/user/orders", requireAuth, async (req, res) => {
       const err = (await erpRes.json().catch(() => ({}))) as { _server_messages?: string };
       res.status(erpRes.status).json({ error: parseErpError(err) || "Failed to fetch orders." }); return;
     }
-    const data = (await erpRes.json()) as { data: unknown };
-    res.json({ data: data.data });
+    const orders = (await erpRes.json()) as { data: any[] };
+    const orderData = orders.data || [];
+
+    if (orderData.length > 0) {
+      const orderNames = orderData.map((o) => o.name);
+      const itemParams = new URLSearchParams({
+        fields: JSON.stringify(["parent", "item_name", "item_code"]),
+        filters: JSON.stringify([["parent", "in", orderNames]]),
+        limit_page_length: "500",
+      });
+      const itemRes = await erpFetch(getErpUrl(`/api/resource/Sales Order Item?${itemParams.toString()}`), { headers: getErpHeaders() });
+      if (itemRes.ok) {
+        const itemData = (await itemRes.json()) as { data: { parent: string; item_name: string; item_code: string }[] };
+        const itemsByOrder: Record<string, { name: string, code: string }[]> = {};
+        for (const it of itemData.data) {
+          if (!itemsByOrder[it.parent]) itemsByOrder[it.parent] = [];
+          itemsByOrder[it.parent].push({ name: it.item_name, code: it.item_code });
+        }
+        for (const o of orderData) {
+          o.items = (itemsByOrder[o.name] || []).map(i => ({
+              name: i.name,
+              image: `/api/items/image/${i.code}.jpg`
+          }));
+        }
+      }
+    }
+
+    res.json({ data: orderData });
   } catch (err) {
     logger.error({ err: err }, "[user/orders GET]");
     res.status(500).json({ error: "Internal server error." });
@@ -283,7 +309,7 @@ router.get("/user/orders", requireAuth, async (req, res) => {
 // POST /api/user/orders — Place a Sales Order (direct when ERPNext is up,
 // queue + retry fallback when it is temporarily unreachable)
 router.post("/user/orders", async (req, res) => {
-  const { items, delivery_date, addressName, shippingAddress, setAsDefault } = req.body as {
+  const { items, delivery_date, addressName, shippingAddress, setAsDefault, payment_method } = req.body as {
     items?: { item_code: string; item_name?: string; qty: number }[];
     delivery_date?: string;
     /** ERPNext name of the saved address (when a saved address is selected) */
@@ -300,6 +326,7 @@ router.post("/user/orders", async (req, res) => {
     };
     /** true = link the address with the customer and mark it as default */
     setAsDefault?: boolean;
+    payment_method?: string;
   };
 
   // Logged-in customers are identified by their ERPNext session; guest
@@ -364,6 +391,7 @@ router.post("/user/orders", async (req, res) => {
     setAsDefault,
     defaultWarehouse,
     defaultCompany,
+    payment_method: payment_method || "Cash on Delivery",
   };
 
   // ── Try direct placement first — ERPNext is healthy in the normal case ─────
@@ -463,6 +491,9 @@ router.get("/user/orders/:name", requireAuth, async (req, res) => {
 
 // DELETE /api/user/orders/:name — customer cancels their own order
 router.delete("/user/orders/:name", requireAuth, async (req, res) => {
+  // Note: This route cancels the order but does not fully delete it from ERPNext.
+  // Full deletion of a cancelled Sales Order is handled by the /user/orders/:name/delete route.
+  // This route ensures the order status is set to "Cancelled" if it's not already.
   const { name } = req.params;
   const email = req.loggedInEmail!;
 
