@@ -32,7 +32,12 @@ export function Navbar() {
             : "border border-transparent bg-white/70 backdrop-blur-md"
         }`}
       >
-        <Link to="/" className="flex items-center" aria-label="OxiGen home">
+        <Link
+          to="/"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex items-center"
+          aria-label="OxiGen home"
+        >
           <img
             src={oxigenLogo}
             alt="OxiGen — Pakistan's No.1 Vitamin Brand"
@@ -47,6 +52,7 @@ export function Navbar() {
               <Link
                 key={n.to}
                 to={n.to}
+                onClick={() => n.to === "/" && window.scrollTo({ top: 0, behavior: 'smooth' })}
                 activeOptions={{ exact: n.to === "/" }}
                 className="group relative rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-ink"
                 activeProps={{ className: "text-ink" }}
@@ -123,7 +129,10 @@ export function Navbar() {
                 <Link
                   key={n.to}
                   to={n.to}
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    setOpen(false);
+                    if (n.to === "/") window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   className="block rounded-xl px-4 py-3 text-sm font-medium text-ink hover:bg-white/50"
                 >
                   {n.label}
