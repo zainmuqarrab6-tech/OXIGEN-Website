@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Package, Search, Truck, RotateCcw, Eye } from "lucide-react";
+import { Package, Search, Truck, RotateCcw, Eye, XCircle } from "lucide-react";
 import {
   DashCard,
   StatusBadge,
@@ -8,7 +8,7 @@ import {
   orderTone,
   payTone,
 } from "@/components/dashboard/DashboardShell";
-import { formatPKR } from "@/lib/site-data";
+import { formatPKR, catalog } from "@/lib/site-data";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/dashboard/orders")({
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/dashboard/orders")({
 const FILTERS = ["All", "Processing", "Shipped", "Delivered", "Cancelled"] as const;
 
 function OrdersPage() {
-  const { orders: storeOrders } = useStore();
+  const { orders: storeOrders, cancelOrder, removeOrder } = useStore();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [q, setQ] = useState("");
 
@@ -86,15 +86,28 @@ function OrdersPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center gap-4">
-                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-secondary">
-                    <Package className="h-6 w-6 text-muted-foreground" />
+                {o.items && o.items.length > 0 ? (
+                  o.items.map((it: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-4">
+                      <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-secondary">
+                        <img src={it.image} alt={it.name} className="h-full w-full object-contain p-1.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-1 text-sm font-semibold text-ink">{it.name}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-secondary">
+                      <Package className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-1 text-sm font-semibold text-ink">{o.item_summary || "Package Details"}</p>
+                      <p className="text-xs text-muted-foreground">Click "View Details" to see items</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-1 text-sm font-semibold text-ink">Package Details</p>
-                    <p className="text-xs text-muted-foreground">Refer to details page for full item breakdown</p>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
@@ -121,6 +134,22 @@ function OrdersPage() {
                 >
                   <Truck className="h-4 w-4" /> Track Order
                 </Link>
+                {["Processing", "To Deliver", "To Deliver and Bill"].includes(o.status) && (
+                  <button
+                    onClick={() => cancelOrder(o.id)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/70 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  >
+                    <XCircle className="h-4 w-4" /> Cancel Order
+                  </button>
+                )}
+                {["Cancelled", "Completed", "Delivered"].includes(o.status) && (
+                  <button
+                    onClick={() => removeOrder(o.id)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/70 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  >
+                    <XCircle className="h-4 w-4" /> Remove Order
+                  </button>
+                )}
                 <button className="inline-flex items-center gap-1.5 rounded-xl bg-white/70 px-4 py-2 text-sm font-semibold text-ink ring-1 ring-inset ring-border hover:bg-white">
                   <RotateCcw className="h-4 w-4" /> Buy Again
                 </button>
