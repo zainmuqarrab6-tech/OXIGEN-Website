@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Package,
@@ -17,10 +18,8 @@ import {
   StatusBadge,
   orderTone,
 } from "@/components/dashboard/DashboardShell";
-import {
-  mockNotifications,
-} from "@/lib/dashboard-mock";
-import { catalog, formatPKR } from "@/lib/site-data";
+import { mockNotifications } from "@/lib/dashboard-mock";
+import { slugify, formatPKR } from "@/lib/site-data";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -44,9 +43,21 @@ function DashboardHome() {
   const completedOrders = orders.filter((o) => o.status === "Completed" || o.status === "Delivered").length;
 
   const recent = orders.slice(0, 3);
-  const recommended = catalog.slice(0, 4);
-  const viewed = catalog.slice(4, 8);
   const notifs = mockNotifications.slice(0, 4);
+
+  const [recommended, setRecommended] = useState<any[]>([]);
+  const [viewed, setViewed] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/items?limit=8`)
+      .then((res) => res.json())
+      .then((json) => {
+        const items = json.data || [];
+        setRecommended(items.slice(0, 4));
+        setViewed(items.slice(4, 8));
+      })
+      .catch(() => {});
+  }, []);
 
   const kpis = [
     { label: "Total Orders", value: totalOrders, icon: Package, tone: "from-primary to-accent" },
@@ -202,7 +213,7 @@ function DashboardHome() {
   );
 }
 
-function ProductStrip({ title, items }: { title: string; items: typeof catalog }) {
+function ProductStrip({ title, items }: { title: string; items: any[] }) {
   return (
     <DashCard>
       <SectionHeader
@@ -214,22 +225,29 @@ function ProductStrip({ title, items }: { title: string; items: typeof catalog }
         }
       />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-        {items.map((p) => (
-          <Link
-            key={p.slug}
-            to="/product/$slug"
-            params={{ slug: p.slug }}
-            className="group rounded-xl border border-border/60 bg-white/60 p-3 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-          >
-            <div className="mb-2 aspect-square overflow-hidden rounded-lg bg-secondary">
-              <img src={p.img} alt={p.name} loading="lazy" className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105" />
-            </div>
-            <p className="line-clamp-2 text-xs font-semibold text-ink">{p.name}</p>
-            <p className="mt-1 text-sm font-extrabold text-primary">
-              {p.available ? formatPKR(p.price) : "Soon"}
-            </p>
-          </Link>
-        ))}
+        {items.map((p) => {
+          const slug = p.route?.split("/").pop() || slugify(p.item_name);
+          const price = p.standard_rate || 0;
+          const available = p.custom_stock_qty !== 0;
+          const img = p.image ? `${import.meta.env.VITE_API_URL}/items/image${p.image}` : "";
+
+          return (
+            <Link
+              key={p.item_code}
+              to="/product/$slug"
+              params={{ slug }}
+              className="group rounded-xl border border-border/60 bg-white/60 p-3 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+            >
+              <div className="mb-2 aspect-square overflow-hidden rounded-lg bg-secondary">
+                <img src={img} alt={p.item_name} loading="lazy" className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105" />
+              </div>
+              <p className="line-clamp-2 text-xs font-semibold text-ink">{p.item_name}</p>
+              <p className="mt-1 text-sm font-extrabold text-primary">
+                {available ? formatPKR(price) : "Soon"}
+              </p>
+            </Link>
+          );
+        })}
       </div>
     </DashCard>
   );
