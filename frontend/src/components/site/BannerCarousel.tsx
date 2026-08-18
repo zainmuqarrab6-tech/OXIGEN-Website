@@ -57,7 +57,8 @@ export function BannerCarousel() {
               return (
                 <Link
                   key={b.id || idx}
-                  to={b.href}
+                  to="/product/$slug"
+                  params={{ slug: b.id }}
                   className="relative block w-full shrink-0 overflow-hidden"
                   aria-label={b.title}
                 >
