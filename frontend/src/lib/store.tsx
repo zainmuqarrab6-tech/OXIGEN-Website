@@ -13,6 +13,8 @@ export type Order = {
   date: string;
   status: string;
   total: number;
+  item_summary?: string;
+  items?: { name: string; image?: string }[];
 };
 export type OrderPlaced = Order & {
   items?: { slug: string; name: string; qty: number; price: number }[];
@@ -126,7 +128,7 @@ type StoreValue = {
   setDrawerOpen: (v: boolean) => void;
   wishlist: string[];
   wishlistItems: CatalogItem[];
-  toggleWishlist: (slug: string) => void;
+  toggleWishlist: (slug: string) => boolean;
   inWishlist: (slug: string) => boolean;
   user: User | null;
   signIn: (usr: string, pwd: string) => Promise<boolean>;
@@ -142,10 +144,13 @@ type StoreValue = {
   updateAddress: (id: string, addr: Partial<Address>) => Promise<boolean>;
   deleteAddress: (id: string) => Promise<boolean>;
   orders: Order[];
+  fetchOrders: (email: string) => Promise<void>;
   placeOrder: (o: {
     items: { slug: string; qty: number }[];
     customer: { name: string; email: string; phone: string; address: string; city: string };
+    paymentMethod?: string;
   }) => Promise<OrderPlaced | null>;
+  cancelOrder: (orderId: string) => Promise<boolean>;
 };
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -311,6 +316,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             date: o.transaction_date,
             status: o.status,
             total: o.grand_total,
+            item_summary: (o as any).item_summary,
+            items: (o as any).items?.map((it: any) => ({
+              name: it.name,
+              image: it.image,
+            })) || [],
           })),
         );
       }
@@ -645,9 +655,56 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const cancelOrder = async (orderId: string) => {
+    try {
+      const token = await csrfToken();
+      const res: { message?: string; error?: string } = await fetch(`${API_BASE}/user/orders/${encodeURIComponent(orderId)}`, {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": token },
+        credentials: "include",
+      }).then((r) => r.json());
+
+      if (res.message) {
+        toast.success(res.message);
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        return true;
+      } else {
+        toast.error(res.error || "Failed to cancel order.");
+        return false;
+      }
+    } catch {
+      toast.error("Failed to cancel order.");
+      return false;
+    }
+  };
+
+  const removeOrder = async (orderId: string) => {
+    try {
+      const token = await csrfToken();
+      const res: { message?: string; error?: string } = await fetch(`${API_BASE}/user/orders/${encodeURIComponent(orderId)}/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+        credentials: "include",
+      }).then((r) => r.json());
+
+      if (res.message) {
+        toast.success(res.message);
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        return true;
+      } else {
+        toast.error(res.error || "Failed to remove order.");
+        return false;
+      }
+    } catch {
+      toast.error("Failed to remove order.");
+      return false;
+    }
+  };
+
   const placeOrder = async (o: {
     items: { slug: string; qty: number }[];
     customer: { name: string; email: string; phone: string; address: string; city: string };
+    paymentMethod?: string;
   }) => {
     try {
       const bodyPayload = {
@@ -659,6 +716,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           country: "Pakistan",
           phone: o.customer.phone,
         },
+        payment_method: o.paymentMethod || "Cash on Delivery",
       };
 
       const res: ApiResponse<unknown> & {
@@ -811,7 +869,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteAddress,
       orders,
       placeOrder,
-    };
+      cancelOrder,
+      removeOrder,
+      fetchOrders,
+    } as unknown as StoreValue;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, wishlist, user, orders, drawerOpen, profile, addresses, allCatalog]);
 
