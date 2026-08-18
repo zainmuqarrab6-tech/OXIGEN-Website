@@ -811,6 +811,7 @@ export class ErpAdapter {
       setAsDefault,
       defaultWarehouse,
       defaultCompany,
+      payment_method,
     } = payload;
 
     let customerName = await findCustomerByEmail(email);
@@ -942,6 +943,7 @@ export class ErpAdapter {
       ...(billingAddressName ? { customer_address: billingAddressName } : {}),
       ...(shippingAddressName ? { shipping_address_name: shippingAddressName } : {}),
       items: resolvedItems,
+      payment_method: payment_method || "Cash on Delivery",
     };
 
     const orderRes = await erpFetch(getErpUrl("/api/resource/Sales Order"), {
