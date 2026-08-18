@@ -354,6 +354,7 @@ export function getReviewStats(reviews: ProductReview[]) {
 
 // ---- Homepage banners (from OxiGen brand assets) ----
 export type Banner = {
+  id?: string;
   title: string;
   sub: string;
   img: string;
@@ -485,10 +486,11 @@ export const promoBanners: (Banner & {
   badgeBg?: string;
 })[] = [
   {
+    id: "nutri-cept",
     title: "Nutri-Cept® — New 2026 Packaging",
     sub: "Dual Inositol (50mg), Chaste Berry & 15+ Female Micronutrients for PCOS, Hormonal Balance & Ovulation.",
     img: "/products/nutricept-new-packaging.jpeg",
-    href: "/product/nutri-cept-women-s-wellness",
+    href: "/product/nutri-cept",
     cta: "Shop Nutri-Cept",
     tag: "🌸 WOMEN'S HORMONAL BALANCE",
     price: "Rs.1,600",
@@ -497,10 +499,11 @@ export const promoBanners: (Banner & {
     badgeBg: "bg-rose-500/20 text-rose-300 border-rose-500/30",
   },
   {
+    id: "oxidop",
     title: "OxiDop® — Laser Focus & Motivation",
     sub: "Clean Nootropic Matrix with L-Tyrosine, Rhodiola Rosea & GABA for All-Day Productivity without Jitters.",
     img: "/products/oxidop-new-packaging.jpeg",
-    href: "/product/oxidop-focus-dopamine-support",
+    href: "/product/oxidop",
     cta: "Shop OxiDop",
     tag: "⚡ BRAIN & DOPAMINE NOOTROPIC",
     price: "Rs.4,500",
@@ -511,10 +514,10 @@ export const promoBanners: (Banner & {
 ];
 
 export const quickLinks = [
-  { label: "Women's Health", img: "/products/nutricept-new-packaging.jpeg", to: "/product/nutri-cept-women-s-wellness" },
-  { label: "Brain & Focus", img: "/products/oxidop-new-packaging.jpeg", to: "/product/oxidop-focus-dopamine-support" },
-  { label: "PCOS Care", img: "/products/nutricept-new-packaging.jpeg", to: "/product/nutri-cept-women-s-wellness" },
-  { label: "Dopamine Boost", img: "/products/oxidop-new-packaging.jpeg", to: "/product/oxidop-focus-dopamine-support" },
+  { label: "Women's Health", img: "/products/nutricept-new-packaging.jpeg", to: "/product/nutri-cept" },
+  { label: "Brain & Focus", img: "/products/oxidop-new-packaging.jpeg", to: "/product/oxidop" },
+  { label: "PCOS Care", img: "/products/nutricept-new-packaging.jpeg", to: "/product/nutri-cept" },
+  { label: "Dopamine Boost", img: "/products/oxidop-new-packaging.jpeg", to: "/product/oxidop" },
   { label: "New Launch", img: "/products/oxidop-new-packaging.jpeg", to: "/shop" },
   { label: "All Products", img: "/products/nutricept-new-packaging.jpeg", to: "/shop" },
 ];
