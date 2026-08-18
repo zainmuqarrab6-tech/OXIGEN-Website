@@ -28,8 +28,6 @@ import { Link } from "@tanstack/react-router";
 import {
   CDN,
   brand,
-  categories,
-  products,
   perks,
   testimonials,
   faqs,
@@ -57,7 +55,6 @@ function Heading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?
 export function Categories({ showHeading = true }: { showHeading?: boolean }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
@@ -69,18 +66,15 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
       .then((json) => {
         if (Array.isArray(json?.data) && json.data.length > 0) {
           setData(json.data);
-        } else {
-          setError(true);
         }
         setLoading(false);
       })
       .catch(() => {
-        setError(true);
         setLoading(false);
       });
   }, []);
 
-  const displayCategories = !error && Array.isArray(data) && data.length > 0 ? data : categories;
+  const displayCategories = data;
 
   return (
     <section
@@ -138,7 +132,6 @@ export function Categories({ showHeading = true }: { showHeading?: boolean }) {
 export function Products() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const { addToCart, toggleWishlist, inWishlist } = useStore();
 
   useEffect(() => {
@@ -151,18 +144,15 @@ export function Products() {
       .then((json) => {
         if (Array.isArray(json?.data) && json.data.length > 0) {
           setData(json.data);
-        } else {
-          setError(true);
         }
         setLoading(false);
       })
       .catch(() => {
-        setError(true);
         setLoading(false);
       });
   }, []);
 
-  const displayProducts = !error && Array.isArray(data) && data.length > 0 ? data : products;
+  const displayProducts = data;
 
   return (
     <section id="products" className="relative overflow-hidden py-24">
