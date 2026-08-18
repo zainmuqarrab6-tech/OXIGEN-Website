@@ -24,6 +24,7 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const { cartItems, subtotal, placeOrder, user } = useStore();
   const [placed, setPlaced] = useState<OrderPlaced | null>(null);
+  const [method, setMethod] = useState("Cash on Delivery");
   const [form, setForm] = useState({
     name: user?.name ?? "",
     email: user?.email ?? "",
@@ -49,6 +50,7 @@ function CheckoutPage() {
     const order = await placeOrder({
       items: cartItems.map((i) => ({ slug: i.slug, qty: i.qty })),
       customer: form,
+      paymentMethod: method,
     });
     if (order) {
       setPlaced(order);
@@ -150,6 +152,31 @@ function CheckoutPage() {
             </div>
             {field("address", "Street Address")}
             {field("city", "City")}
+
+            <div className="pt-2">
+              <h3 className="mb-3 text-sm font-semibold text-ink">Payment Method</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {["Cash on Delivery", "Bank Transfer"].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMethod(m)}
+                    className={`flex items-center justify-between rounded-xl border p-4 text-left transition-all ${
+                      method === m
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border bg-white/40 hover:bg-white/60"
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-ink">{m}</span>
+                    <div className={`h-4 w-4 rounded-full border-2 transition-all ${
+                      method === m ? "border-primary bg-primary" : "border-muted"
+                    }`}>
+                      {method === m && <div className="m-auto h-1.5 w-1.5 rounded-full bg-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <button
               type="submit"
