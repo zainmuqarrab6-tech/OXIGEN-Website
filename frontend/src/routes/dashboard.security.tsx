@@ -5,6 +5,8 @@ import { DashCard, SectionHeader, StatusBadge } from "@/components/dashboard/Das
 import { mockDevices, mockLoginHistory } from "@/lib/dashboard-mock";
 import { toast } from "sonner";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
 export const Route = createFileRoute("/dashboard/security")({
   head: () => ({ meta: [{ title: "Security — OxiGen" }, { name: "robots", content: "noindex" }] }),
   component: SecurityPage,
@@ -12,7 +14,6 @@ export const Route = createFileRoute("/dashboard/security")({
 
 function SecurityPage() {
   const [twoFA, setTwoFA] = useState(false);
-
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <DashCard>
