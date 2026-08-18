@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, MapPin, CreditCard, CheckCircle2, Circle, Ban, Package } from "lucide-react";
+import { ArrowLeft, MapPin, CreditCard, CheckCircle2, Circle, Ban } from "lucide-react";
 import {
   DashCard,
   SectionHeader,
@@ -8,7 +8,7 @@ import {
   orderTone,
   payTone,
 } from "@/components/dashboard/DashboardShell";
-import { formatPKR, catalog } from "@/lib/site-data";
+import { formatPKR } from "@/lib/site-data";
 import { toast } from "sonner";
 
 import { API_BASE } from "@/lib/api";
@@ -103,11 +103,10 @@ function OrderDetailsPage() {
   const navigate = useNavigate();
 
   const mappedItems = (orderData.items || []).map((it: any) => {
-    const product = catalog.find((c) => c.slug === it.item_code);
     return {
-      slug: it.item_code,
-      name: it.item_name || product?.name || it.item_code,
-      img: product?.img || "",
+      slug: it.slug,
+      name: it.item_name || it.name || it.slug,
+      img: it.image || "/products/fallback-image.jpg",
       qty: it.qty,
       price: it.rate,
     };
