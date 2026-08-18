@@ -20,7 +20,6 @@ const perkIcons = [Truck, ShieldCheck, RotateCcw];
 function Shop() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [catLoading, setCatLoading] = useState(true);
   const { addToCart, toggleWishlist, inWishlist } = useStore();
@@ -36,7 +35,6 @@ function Shop() {
         setLoading(false);
       })
       .catch(() => {
-        setError(true);
         setLoading(false);
       });
   }, []);
@@ -75,7 +73,7 @@ function Shop() {
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-96 w-full animate-pulse rounded-3xl bg-secondary glass p-6" />
               ))
-            : (error ? [] : products).map((p, i) => {
+            : products.map((p, i) => {
                 const slug = p.route?.split("/").pop() || slugify(p.item_name);
                 const price = p.standard_rate || 0;
                 const available = p.custom_stock_qty !== 0;
