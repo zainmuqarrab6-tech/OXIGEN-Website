@@ -348,7 +348,10 @@ function ProductPage() {
                 )}
               </div>
 
-              <p className="mt-5 leading-relaxed text-muted-foreground">{product.desc}</p>
+              <div
+                className="mt-5 leading-relaxed text-muted-foreground"
+                dangerouslySetInnerHTML={{ __html: product.desc }}
+              />
 
               {product.highlights.length > 0 && (
                 <ul className="mt-5 grid gap-2 sm:grid-cols-2">
